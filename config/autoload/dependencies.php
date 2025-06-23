@@ -10,4 +10,6 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 return [
+    // Jwt Auth Token
+    \App\Library\Contract\AuthTokenInterface::class => \App\Library\JwtAuthTokenLib::class,
 ];
