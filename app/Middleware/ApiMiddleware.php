@@ -2,6 +2,7 @@
 
 namespace App\Middleware;
 
+use App\Constants\ErrorCode;
 use App\Library\Contract\AuthTokenInterface;
 use Hyperf\Context\Context;
 use Hyperf\HttpServer\Contract\RequestInterface;
@@ -31,7 +32,7 @@ class ApiMiddleware implements MiddlewareInterface
     {
         // Retrieve Request Header Payload
         $payload = $this->authToken->getUserData();
-        if (!$payload) return $this->response->json(['code' => 400, 'msg' => '请先登录']);
+        if (!$payload) return $this->response->json(['code' => ErrorCode::UNAUTHORIZED, 'msg' => '请先登录']);
 
         // Context override request though proxy ServerRequestInterface class
         $request = Context::override(ServerRequestInterface::class,

@@ -12,8 +12,7 @@ class LoginController extends AbstractController
 {
     public function login(AuthTokenInterface $authToken)
     {
-        $username = $this->request->input('username');
-        $password = $this->request->input('password');
+        list($username,$password) = $this->request->inputs(['username', 'password']);
         $user = Db::table('user')->where(['username' => $username])->first();
         if(!$user){
             return returnError('账号不存在');

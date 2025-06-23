@@ -2,8 +2,10 @@
 
 namespace App\Controller\admin;
 
+use App\Constants\ErrorCode;
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
+use Hyperf\Constants\ConstantsCollector;
 use Hyperf\DbConnection\Db;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
@@ -12,7 +14,8 @@ use Hyperf\HttpServer\Annotation\Middleware;
 #[Middleware(AdminMiddleware::class)]
 class IndexController extends AbstractController
 {
-    public function index(){
+    public function index()
+    {
         $user_data = $this->request->getAttribute("user_data");
         return [
             'data' => $user_data,

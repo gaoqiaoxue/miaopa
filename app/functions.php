@@ -1,5 +1,8 @@
 <?php
 
+use App\Constants\ErrorCode;
+use Hyperf\Constants\ConstantsCollector;
+
 if (!function_exists("returnSuccess")) {
     function returnSuccess($data = [], $msg = 'success', $code = 200)
     {
@@ -22,17 +25,26 @@ if (!function_exists("returnError")) {
     }
 }
 
-if(!function_exists("setPassword")) {
+if (!function_exists("setPassword")) {
     function setPassword($password)
     {
-        return password_hash($password, PASSWORD_BCRYPT);
+        $salt = 'bcjkdhfdjfhsjkdfhsiovsjkdhfsfnkdsjcsdvbsdksdkj';
+        return hash('sha256', $password . $salt);
     }
 }
 
-if(!function_exists("checkPassword")) {
+if (!function_exists("checkPassword")) {
     function checkPassword($password, $hash)
     {
-        return password_verify($password, $hash);
+        $salt = 'bcjkdhfdjfhsjkdfhsiovsjkdhfsfnkdsjcsdvbsdksdkj';
+        return hash('sha256', $password . $salt) == $hash;
     }
+}
 
+if (!function_exists("getEnums")) {
+    function getEnums($className)
+    {
+        $data = ConstantsCollector::get($className);
+        return array_map(fn($value) => $value["message"], $data);
+    }
 }

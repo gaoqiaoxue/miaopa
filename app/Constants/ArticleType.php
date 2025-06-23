@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Constants;
 
 use Hyperf\Constants\Annotation\Constants;
@@ -9,12 +7,16 @@ use Hyperf\Constants\Annotation\Message;
 use Hyperf\Constants\EnumConstantsTrait;
 
 #[Constants]
-enum ErrorCode:int
+enum ArticleType: int
 {
     use EnumConstantsTrait;
-    #[Message("系统错误")]
-    case SERVER_ERROR = 500;
 
-    #[Message("请先登录")]
-    case UNAUTHORIZED = 401;
+    #[Message('圈子')]
+    case ARTICLE = 1;
+
+    #[Message('动漫IP')]
+    case CARTOON = 2;
+
+    #[Message('游戏IP')]
+    case GAME = 3;
 }
