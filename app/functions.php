@@ -42,7 +42,7 @@ if (!function_exists("checkPassword")) {
 }
 
 if (!function_exists("getEnums")) {
-    function getEnums($className)
+    function getEnumMaps($className)
     {
         $data = ConstantsCollector::get($className);
         return array_map(fn($value) => $value["message"], $data);
