@@ -2,6 +2,8 @@
 
 namespace App\Library;
 
+use App\Exception\NoAuthException;
+use App\Exception\ParametersException;
 use App\Library\Contract\AuthTokenInterface;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Contract\RequestInterface;
@@ -30,10 +32,8 @@ class JwtAuthTokenLib implements AuthTokenInterface
                 'token' => $token->toString(),
                 'exp' => $this->jwt->getTTL($token->toString()),
             ];
-        } catch (\Exception $e) {
-            // 异常直接接管
-            // TODO: 处理自定义异常
-            return [];
+        } catch (\Throwable $e) {
+            throw new ParametersException($e->getMessage());
         }
     }
 
@@ -46,10 +46,8 @@ class JwtAuthTokenLib implements AuthTokenInterface
                 'token' => $token->toString(),
                 'exp' => $this->jwt->getTTL($token->toString()),
             ];
-        } catch (\Exception $e) {
-            // 异常直接接管
-            // TODO: 处理自定义异常
-            return [];
+        } catch (\Throwable $e) {
+            throw new ParametersException($e->getMessage());
         }
     }
 
@@ -58,10 +56,8 @@ class JwtAuthTokenLib implements AuthTokenInterface
         try {
             $token = JWTUtil::getToken($this->request);
             return $this->jwt->logout($token);
-        } catch (\Exception $e) {
-            // 异常直接接管
-            // TODO: 处理自定义异常
-            return false;
+        }catch (\Throwable $e) {
+            throw new ParametersException($e->getMessage());
         }
     }
 
@@ -75,11 +71,9 @@ class JwtAuthTokenLib implements AuthTokenInterface
                     'jwt_claims' => JWTUtil::getParserData($this->request)
                 ];
             }
-        } catch (\Exception $e) {
-            // 异常直接接管
-            // TODO: 处理自定义异常
-            return [];
+        } catch (\Throwable $e) {
+            throw new NoAuthException($e->getMessage());
         }
-        return [];
+        throw new NoAuthException('token 异常');
     }
 }

@@ -2,11 +2,9 @@
 
 namespace App\Middleware;
 
-use App\Constants\ErrorCode;
+use App\Exception\NoAuthException;
 use App\Library\Contract\AuthTokenInterface;
 use Hyperf\Context\Context;
-use Hyperf\HttpServer\Contract\RequestInterface;
-use Hyperf\HttpServer\Contract\ResponseInterface as HttpResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -15,11 +13,9 @@ use Psr\Http\Server\RequestHandlerInterface;
 class AdminMiddleware implements MiddlewareInterface
 {
     /**
-     * @param HttpResponse $response
-     * @param RequestInterface $request
      * @param AuthTokenInterface $authToken
      */
-    public function __construct(protected HttpResponse $response, protected RequestInterface $request, protected AuthTokenInterface $authToken)
+    public function __construct(protected AuthTokenInterface $authToken)
     {
     }
 
@@ -32,7 +28,9 @@ class AdminMiddleware implements MiddlewareInterface
     {
         // Retrieve Request Header Payload
         $payload = $this->authToken->getUserData('admin');
-        if (!$payload) return $this->response->json(['code' => ErrorCode::UNAUTHORIZED, 'msg' => '请先登录']);
+        if (!$payload){
+            throw new NoAuthException();
+        }
 
         // Context override request though proxy ServerRequestInterface class
         $request = Context::override(ServerRequestInterface::class,

@@ -4,39 +4,45 @@ namespace App\Controller\api;
 
 use App\Controller\AbstractController;
 use App\Library\Contract\AuthTokenInterface;
-use Hyperf\DbConnection\Db;
+use App\Request\UserRequest;
+use App\service\UserService;
 use Hyperf\HttpServer\Annotation\AutoController;
+use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
 class LoginController extends AbstractController
 {
-    public function login(AuthTokenInterface $authToken)
+    /**
+     * 账号密码登录
+     * @param AuthTokenInterface $authToken
+     * @param UserRequest $request
+     * @param UserService $userService
+     * @return array
+     */
+    #[Scene('login')]
+    public function login(AuthTokenInterface $authToken, UserRequest $request, UserService $userService)
     {
-        list($username,$password) = $this->request->inputs(['username', 'password']);
-        $user = Db::table('user')->where(['username' => $username])->first();
-        if(!$user){
-            return returnError('账号不存在');
-        }
-        if(!checkPassword($password, $user->password)){
-            return returnError('账号或密码错误');
-        }
-        $user_data = [
-            'uid' => $user->id,
-            'username' => $user->username,
-        ];
-        $token = $authToken->createToken($user_data);
-        return returnSuccess([
-            'user' => $user,
-            'token' => $token,
-        ]);
+        $data = $request->all();
+        $result = $userService->login($data,$authToken);
+        return returnSuccess($result);
     }
 
+    /**
+     * 刷新用户token
+     * @param AuthTokenInterface $authToken
+     * @return array
+     */
     public function refreshToken(AuthTokenInterface $authToken)
     {
         $new_token = $authToken->refreshToken();
         return returnSuccess($new_token);
     }
 
+    /**
+     * 退出登录
+     * @param AuthTokenInterface $authToken
+     * @return array
+     */
     public function logout(AuthTokenInterface $authToken)
     {
         $res = $authToken->logout();

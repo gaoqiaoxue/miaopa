@@ -2,6 +2,7 @@
 
 namespace App\service;
 
+use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 use League\Flysystem\Filesystem;
@@ -11,29 +12,17 @@ class FileService
     #[Inject]
     protected Filesystem $filesystem;
 
-
-//    public function upload($file)
-//    {
-//        $stream = fopen($file->getRealPath(), 'r+');
-//        $this->filesystem->writeStream(
-//            'uploads/'.$file->getClientFilename(),
-//            $stream
-//        );
-//        fclose($stream);
-//    }
-
     /**
      * 上传文件并保存记录到数据库
      *
      * @param \Hyperf\HttpMessage\Upload\UploadedFile $file 上传的文件对象
      * @param string $createBy 创建人
      * @return array 返回文件信息
-     * @throws \RuntimeException
      */
     public function upload($file): array
     {
         if (!$file->isValid()) {
-            throw new \RuntimeException('上传文件无效');
+            throw new ParametersException('上传文件无效');
         }
 
         // 获取文件信息

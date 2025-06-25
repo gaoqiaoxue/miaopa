@@ -1,6 +1,5 @@
 <?php
 
-use App\Constants\ErrorCode;
 use Hyperf\Constants\ConstantsCollector;
 
 if (!function_exists("returnSuccess")) {
