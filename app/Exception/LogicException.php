@@ -14,7 +14,7 @@ class LogicException extends BaseException
      * @param string $message
      * @param int $statusCode
      */
-    public function __construct(string $message = '请先登录', int $code = 500, int $statusCode = 200)
+    public function __construct(string $message = '操作失败', int $code = 500, int $statusCode = 200)
     {
         parent::__construct($statusCode, $message, $code);
     }

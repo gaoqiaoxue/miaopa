@@ -13,7 +13,7 @@ class NoAuthException extends BaseException
      * @param string $message
      * @param int $statusCode
      */
-    public function __construct(string $message = '请先登录', int $code = 401, int $statusCode = 401)
+    public function __construct(string $message = '请先登录', int $code = 0, int $statusCode = 401)
     {
         parent::__construct($statusCode, $message, $code);
     }

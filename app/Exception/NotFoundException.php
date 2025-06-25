@@ -12,7 +12,7 @@ class NotFoundException extends BaseException
      * @param string $message
      * @param int $statusCode
      */
-    public function __construct(string $message = 'Not Found', int $code = 404, int $statusCode = 404)
+    public function __construct(string $message = 'Not Found', int $code = 0, int $statusCode = 404)
     {
         parent::__construct($statusCode, $message, $code);
     }

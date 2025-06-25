@@ -4,6 +4,7 @@ namespace App\Exception\Handler;
 
 use App\Exception\BaseException;
 use Hyperf\ExceptionHandler\ExceptionHandler;
+use Hyperf\HttpMessage\Exception\NotFoundHttpException;
 use Hyperf\HttpMessage\Stream\SwooleStream;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
@@ -36,6 +37,7 @@ class ApiExceptionHandler extends ExceptionHandler
      */
     public function isValid(Throwable $throwable): bool
     {
-        return $throwable instanceof BaseException;
+
+        return ($throwable instanceof NotFoundHttpException) or ($throwable instanceof BaseException);
     }
 }
