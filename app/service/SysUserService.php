@@ -5,7 +5,6 @@ namespace App\service;
 use App\Exception\LogicException;
 use App\Library\Contract\AuthTokenInterface;
 use Hyperf\DbConnection\Db;
-use stdClass;
 
 class SysUserService
 {
@@ -80,7 +79,7 @@ class SysUserService
         ];
     }
 
-    public function getInfo(int $user_id): stdClass
+    public function getInfo(int $user_id): object
     {
         $user = Db::table('sys_user')
             ->leftJoin('sys_user_role', 'sys_user.user_id', '=', 'sys_user_role.user_id')

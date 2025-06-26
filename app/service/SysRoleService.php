@@ -7,7 +7,7 @@ use Hyperf\DbConnection\Db;
 /**
  * 后台账号权限相关
  */
-class SysPermissionService
+class SysRoleService
 {
     // 获取所有菜单列表
     public function getMenus(int $role_id = 0): array
@@ -24,5 +24,9 @@ class SysPermissionService
             ->select($columns)
             ->get()
             ->toArray();
+    }
+
+    public function getSysRoleList(array $params)
+    {
     }
 }

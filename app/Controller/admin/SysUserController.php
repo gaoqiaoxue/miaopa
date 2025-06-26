@@ -5,7 +5,7 @@ namespace App\Controller\admin;
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
 use App\Request\SysUserRequest;
-use App\service\SysPermissionService;
+use App\service\SysRoleService;
 use App\service\SysUserService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
@@ -23,7 +23,7 @@ class SysUserController extends AbstractController
     protected SysUserService $userService;
 
     #[Inject]
-    protected SysPermissionService $permissionService;
+    protected SysRoleService $permissionService;
 
     public function getSysUserList(): array
     {
