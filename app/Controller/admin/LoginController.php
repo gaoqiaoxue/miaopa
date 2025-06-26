@@ -4,48 +4,50 @@ namespace App\Controller\admin;
 
 use App\Controller\AbstractController;
 use App\Library\Contract\AuthTokenInterface;
+use App\Request\SysUserRequest;
+use App\service\SysUserService;
 use Hyperf\DbConnection\Db;
+use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
+use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
 class LoginController extends AbstractController
 {
-    public function login(AuthTokenInterface $authToken)
+    #[Inject]
+    protected SysUserService $service;
+
+    /**
+     * 账号密码登录
+     * @param SysUserRequest $request
+     * @return array
+     */
+    #[Scene('login')]
+    public function login(SysUserRequest $request)
     {
-        $username = $this->request->input('user_name');
-        $password = $this->request->input('password');
-        $user = Db::table('sys_user')->where(['user_name' => $username])->first();
-        if(!$user){
-            return returnError('账号不存在');
-        }
-        Db::table('sys_user')->where(['user_name' => $username])->update(['password' => password_hash($password, PASSWORD_BCRYPT)]);
-        if(!checkPassword($password, $user->password)){
-            return returnError('账号或密码错误');
-        }
-        $user_data = [
-            'user_id' => $user->user_id,
-            'user_name' => $user->user_name,
-        ];
-        $token = $authToken->createToken($user_data, 'admin');
-        return returnSuccess([
-            'user' => $user,
-            'token' => $token,
-        ]);
+        $data = $request->validated();
+        $result = $this->service->login($data);
+        return returnSuccess($result);
     }
 
-    public function refreshToken(AuthTokenInterface $authToken)
+    /**
+     * 刷新用户token
+     * @return array
+     */
+    public function refreshToken()
     {
-        $new_token = $authToken->refreshToken();
+        $new_token = $this->service->refreshToken();
         return returnSuccess($new_token);
     }
 
-    public function logout(AuthTokenInterface $authToken)
+    /**
+     * 退出登录
+     * @return array
+     */
+    public function logout()
     {
-        $res = $authToken->logout();
-        if($res){
-            return returnSuccess([],'已退出');
-        }
-        return returnError('操作失败');
+        $this->service->logout();
+        return returnSuccess();
     }
 
 }

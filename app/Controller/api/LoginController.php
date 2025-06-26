@@ -3,52 +3,48 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
 use App\Request\UserRequest;
 use App\service\UserService;
+use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
 class LoginController extends AbstractController
 {
+    #[Inject]
+    protected UserService $userService;
+
     /**
-     * 账号密码登录
-     * @param AuthTokenInterface $authToken
+     *  账号密码登录
      * @param UserRequest $request
-     * @param UserService $userService
      * @return array
      */
     #[Scene('login')]
-    public function login(AuthTokenInterface $authToken, UserRequest $request, UserService $userService)
+    public function login(UserRequest $request)
     {
         $data = $request->all();
-        $result = $userService->login($data,$authToken);
+        $result = $this->userService->login($data);
         return returnSuccess($result);
     }
 
     /**
      * 刷新用户token
-     * @param AuthTokenInterface $authToken
      * @return array
      */
-    public function refreshToken(AuthTokenInterface $authToken)
+    public function refreshToken()
     {
-        $new_token = $authToken->refreshToken();
+        $new_token = $this->userService->refreshToken();
         return returnSuccess($new_token);
     }
 
     /**
      * 退出登录
-     * @param AuthTokenInterface $authToken
      * @return array
      */
-    public function logout(AuthTokenInterface $authToken)
+    public function logout()
     {
-        $res = $authToken->logout();
-        if($res){
-            return returnSuccess([],'已退出');
-        }
-        return returnError('操作失败');
+        $this->userService->logout();
+        return returnSuccess();
     }
 }

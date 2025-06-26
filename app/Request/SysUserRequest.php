@@ -6,10 +6,10 @@ namespace App\Request;
 
 use Hyperf\Validation\Request\FormRequest;
 
-class UserRequest extends FormRequest
+class SysUserRequest extends FormRequest
 {
     protected array $scenes = [
-        'login' => ['username', 'password']
+        'login' => ['user_name', 'password']
     ];
 
     /**
@@ -26,7 +26,7 @@ class UserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => 'required',
+            'user_name' => 'required',
             'password' => 'required|alpha_dash:ascii|between:6,20',
         ];
     }
@@ -35,11 +35,10 @@ class UserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'username.required' => '请填写账号',
+            'user_name.required' => '请填写账号',
             'password.required' => '请填写密码',
             'password.alpha_dash' => '密码应由字数字母下划线组成',
             'password.between' => '密码长度应在6-20字符',
         ];
-
     }
 }
