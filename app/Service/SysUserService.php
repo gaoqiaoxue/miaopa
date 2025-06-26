@@ -1,6 +1,6 @@
 <?php
 
-namespace App\service;
+namespace App\Service;
 
 use App\Exception\LogicException;
 use App\Library\Contract\AuthTokenInterface;
@@ -62,21 +62,11 @@ class SysUserService
             $query->whereBetween('sys_user.create_time', [$params['create_time_start'], $params['create_time_end']]);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 10;
-        $total = $query->count();
-        $total_page = ceil($total / $page_size);
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['sys_user.user_id', 'sys_user.user_name', 'sys_user.nick_name', 'sys_user.phonenumber', 'sys_user.create_time', 'sys_user.status', 'sys_role.role_name'])
-            ->offset(($page - 1) * $page_size)
-            ->limit($page_size)
-            ->orderBy('id desc')
-            ->get();
-        return [
-            'total' => $total,
-            'page_size' => $page_size,
-            'total_page' => $total_page,
-            'page' => $page,
-            'data' => $data,
-        ];
+            ->orderBy('user_id', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        return paginateTransformer($data);
     }
 
     public function getInfo(int $user_id): object
@@ -87,7 +77,7 @@ class SysUserService
             ->where(['sys_user.user_id' => $user_id])
             ->select(['sys_user.user_id', 'sys_user.user_name', 'sys_user.nick_name', 'sys_user.phonenumber', 'sys_user.create_time', 'sys_user.status', 'sys_role.role_name'])
             ->first();
-        if(!$user){
+        if (!$user) {
             throw new LogicException('用户不存在');
         }
         return $user;
@@ -129,9 +119,9 @@ class SysUserService
             'update_time' => date('Y-m-d H:i:s'),
             'update_by' => $data['update_by'],
         ];
-        if(!empty($data['password']))
+        if (!empty($data['password']))
             $update['password'] = setPassword($data['password']);
-        if(!empty($data['avatar']))
+        if (!empty($data['avatar']))
             $update['avatar'] = $data['avatar'];
         $user_id = $data['user_id'];
         $has = Db::table('sys_user')
@@ -141,7 +131,7 @@ class SysUserService
         if ($has) {
             throw new LogicException('账号不可重复');
         }
-        if ($user_id == 1 && $data['role_id'] != 1){
+        if ($user_id == 1 && $data['role_id'] != 1) {
             throw new LogicException('超级管理员不可修改角色');
         }
         Db::beginTransaction();

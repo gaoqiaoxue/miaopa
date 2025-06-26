@@ -1,6 +1,6 @@
 <?php
 
-namespace App\service;
+namespace App\Service;
 
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;

@@ -1,6 +1,7 @@
 <?php
 
 use Hyperf\Constants\ConstantsCollector;
+use Hyperf\Contract\LengthAwarePaginatorInterface;
 
 if (!function_exists("returnSuccess")) {
     function returnSuccess($data = [], $msg = 'success', $code = 200)
@@ -45,5 +46,19 @@ if (!function_exists("getEnums")) {
     {
         $data = ConstantsCollector::get($className);
         return array_map(fn($value) => $value["message"], $data);
+    }
+}
+
+if(!function_exists('paginateTransformer'))
+{
+    function paginateTransformer(LengthAwarePaginatorInterface $data):array
+    {
+        return [
+            'items' => $data->items(),
+            'total' => $data->total(),
+            'last_page' => $data->lastPage(),
+            'current_page' => $data->currentPage(),
+            'per_page' => $data->perPage(),
+        ];
     }
 }

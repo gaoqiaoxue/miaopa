@@ -4,7 +4,7 @@ namespace App\Controller\admin;
 
 use App\Controller\AbstractController;
 use App\Request\SysUserRequest;
-use App\service\SysUserService;
+use App\Service\SysUserService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\Validation\Annotation\Scene;

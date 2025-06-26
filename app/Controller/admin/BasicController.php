@@ -9,7 +9,7 @@ use App\Constants\PostType;
 use App\Constants\RoleType;
 use App\Constants\VirtualType;
 use App\Controller\AbstractController;
-use App\service\FileService;
+use App\Service\FileService;
 use Hyperf\HttpServer\Annotation\AutoController;
 
 #[AutoController]
