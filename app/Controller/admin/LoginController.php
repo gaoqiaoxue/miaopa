@@ -3,10 +3,8 @@
 namespace App\Controller\admin;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
 use App\Request\SysUserRequest;
 use App\service\SysUserService;
-use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\Validation\Annotation\Scene;
