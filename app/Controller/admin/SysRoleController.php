@@ -11,7 +11,7 @@ use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
-#[AutoController]
+#[AutoController(prefix: "admin/sysRole")]
 #[Middleware(AdminMiddleware::class)]
 class SysRoleController extends AbstractController
 {

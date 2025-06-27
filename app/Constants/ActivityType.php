@@ -17,4 +17,11 @@ enum ActivityType: int
     #[Message('漫展')]
     case COMIC_CON = 1;
 
+    public static function getMaps(): array
+    {
+        return [
+            self::COMIC_CON->value => self::COMIC_CON->name,
+        ];
+    }
+
 }

@@ -17,4 +17,13 @@ enum ErrorCode:int
 
     #[Message("请先登录")]
     case UNAUTHORIZED = 401;
+
+    public static function getMaps(): array
+    {
+        return [
+            self::SERVER_ERROR->value => self::SERVER_ERROR->name,
+            self::UNAUTHORIZED->value => self::UNAUTHORIZED->name,
+        ];
+    }
+
 }

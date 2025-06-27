@@ -19,4 +19,12 @@ enum RoleType: int
 
     #[Message('游戏角色')]
     case GAME = 2;
+    
+    public static function getMaps(): array
+    {
+        return [
+            self::CARTOON->value => self::CARTOON->name,
+            self::GAME->value => self::GAME->name,
+        ];
+    }
 }

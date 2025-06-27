@@ -20,4 +20,12 @@ enum SysStatus: int
     #[Message('禁用')]
     case DISABLE = 1;
 
+    public static function getMaps(): array
+    {
+        return [
+            self::ENABLE->value => self::ENABLE->name,
+            self::DISABLE->value => self::DISABLE->name,
+        ];
+    }
+
 }

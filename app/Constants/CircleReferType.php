@@ -20,4 +20,12 @@ enum CircleReferType: int
     #[Message('角色')]
     case ROLE = 2;
 
+    public static function getMaps(): array
+    {
+        return [
+            self::CIRCLE->value => self::CIRCLE->name,
+            self::ROLE->value => self::ROLE->name,
+        ];
+    }
+
 }

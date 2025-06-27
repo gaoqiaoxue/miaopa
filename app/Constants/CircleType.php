@@ -22,4 +22,13 @@ enum CircleType: int
 
     #[Message('游戏IP')]
     case GAME = 3;
+
+    public static function getMaps(): array
+    {
+        return [
+            self::CIRCLE->value => self::CIRCLE->name,
+            self::CARTOON->value => self::CARTOON->name,
+            self::GAME->value => self::GAME->name,
+        ];
+    }
 }

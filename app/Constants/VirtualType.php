@@ -16,4 +16,12 @@ enum VirtualType: int
 
     #[Message('勋章')]
     case MEDAL = 2;
+
+    public static function getMaps(): array
+    {
+        return [
+            self::FIGURE->value => self::FIGURE->name,
+            self::MEDAL->value => self::MEDAL->name,
+        ];
+    }
 }

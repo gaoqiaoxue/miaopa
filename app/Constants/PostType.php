@@ -19,4 +19,12 @@ enum PostType: int
 
     #[Message('问答帖')]
     case QA = 2;
+
+    public static function getMaps(): array
+    {
+        return [
+            self::DYNAMIC->value => self::DYNAMIC->name,
+            self::QA->value => self::QA->name,
+        ];
+    }
 }

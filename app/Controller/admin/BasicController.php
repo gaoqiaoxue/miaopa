@@ -7,6 +7,7 @@ use App\Constants\CircleReferType;
 use App\Constants\CircleType;
 use App\Constants\PostType;
 use App\Constants\RoleType;
+use App\Constants\Sex;
 use App\Constants\VirtualType;
 use App\Controller\AbstractController;
 use App\Service\FileService;
@@ -22,12 +23,13 @@ class BasicController extends AbstractController
     public function dictionary()
     {
         return [
-            'circle_type' => getEnumMaps(CircleType::class),
-            'circle_refer_type' => getEnumMaps(CircleReferType::class),
-            'post_type' => getEnumMaps(PostType::class),
-            'role_type' => getEnumMaps(RoleType::class),
-            'activity_type' => getEnumMaps(ActivityType::class),
-            'virtual_type' => getEnumMaps(VirtualType::class),
+            'circle_type' => CircleType::getMaps(),
+            'circle_refer_type' => CircleReferType::getMaps(),
+            'post_type' => PostType::getMaps(),
+            'role_type' => RoleType::getMaps(),
+            'activity_type' => ActivityType::getMaps(),
+            'virtual_type' => VirtualType::getMaps(),
+            'sex' => Sex::getMaps()
         ];
     }
 

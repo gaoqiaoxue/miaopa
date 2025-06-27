@@ -15,7 +15,7 @@ use Hyperf\Validation\Annotation\Scene;
 /**
  * 后台账号管理
  */
-#[AutoController]
+#[AutoController(prefix: "admin/sysUser")]
 #[Middleware(AdminMiddleware::class)]
 class SysUserController extends AbstractController
 {

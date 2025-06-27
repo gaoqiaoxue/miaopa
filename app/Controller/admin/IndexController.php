@@ -13,7 +13,6 @@ use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
-#[Middleware(AdminMiddleware::class)]
 class IndexController extends AbstractController
 {
     public function index()
@@ -21,7 +20,7 @@ class IndexController extends AbstractController
 //        $user_data = $this->request->getAttribute("user_data");
         return [
 //            'data' => $user_data,
-            'avatar' => getAvatar(5)
+            'ip' => getClientIp()
         ];
     }
 
