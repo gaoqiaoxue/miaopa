@@ -75,7 +75,7 @@ class SysUserService
             ->leftJoin('sys_user_role', 'sys_user.user_id', '=', 'sys_user_role.user_id')
             ->leftJoin('sys_role', 'sys_user_role.role_id', '=', 'sys_role.role_id')
             ->where(['sys_user.user_id' => $user_id])
-            ->select(['sys_user.user_id', 'sys_user.user_name', 'sys_user.nick_name', 'sys_user.phonenumber', 'sys_user.create_time', 'sys_user.status', 'sys_role.role_name'])
+            ->select(['sys_user.user_id', 'sys_user.user_name', 'sys_user.nick_name', 'sys_user.phonenumber', 'sys_user.create_time', 'sys_user.status','sys_role.role_id', 'sys_role.role_name'])
             ->first();
         if (!$user) {
             throw new LogicException('用户不存在');

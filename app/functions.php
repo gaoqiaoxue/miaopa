@@ -62,3 +62,39 @@ if(!function_exists('paginateTransformer'))
         ];
     }
 }
+
+
+if(!function_exists('arrayToTree'))
+{
+    function arrayToTree(
+        array $items,
+        int|string $parentId = 0,
+        string $idKey = 'id',
+        string $parentKey = 'parent_id',
+        string $childrenKey = 'children'
+    ): array {
+        $branch = [];
+        foreach ($items as $k => $item) {
+            if(is_object($item)) {
+                if ($item->$parentKey == $parentId) {
+                    $children = arrayToTree($items, $item->$idKey, $idKey, $parentKey, $childrenKey);
+                    if ($children) {
+                        $item->$childrenKey = $children;
+                    }
+                    $branch[] = $item;
+                    unset($items[$k]);
+                }
+            }else{
+                if ($item[$parentKey] == $parentId) {
+                    $children = arrayToTree($items, $item[$idKey], $idKey, $parentKey, $childrenKey);
+                    if ($children) {
+                        $item[$childrenKey] = $children;
+                    }
+                    $branch[] = $item;
+                    unset($items[$k]);
+                }
+            }
+        }
+        return $branch;
+    }
+}
