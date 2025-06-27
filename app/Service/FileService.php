@@ -38,6 +38,20 @@ class FileService
             return (array)$existFile;
         }
 
+        // 文件类型校验，只允许图片和视频上传
+        $allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg'];
+        $allowedVideoExtensions = ['mp4', 'avi', 'wmv', 'flv', 'mkv', 'mov', 'mpg', 'mpeg', 'webm', 'm4v', '3gp', 'ogv', 'ogg', 'mts'];
+        $allowedExtensions = array_merge($allowedImageExtensions, $allowedVideoExtensions);
+        if (!in_array(strtolower($extension), $allowedExtensions)) {
+            throw new ParametersException('不支持的文件类型');
+        }
+
+        // 文件大小限制
+        $maxFileSize = 20 * 1024 * 1024; // 20MB
+        if ($size > $maxFileSize) {
+            throw new ParametersException('文件大小请控制在20M以内');
+        }
+
         // 生成新的文件名和存储路径
         $newFileName = $this->generateFileName($originalName, $extension);
         $storagePath = 'uploads/' . date('Ymd') . '/' . $newFileName;
@@ -68,9 +82,11 @@ class FileService
         ];
 
         $uploadId = Db::table('sys_upload')->insertGetId($fileData);
-        $fileData['upload_id'] = $uploadId;
 
-        return $fileData;
+        return [
+            'upload_id' => $uploadId,
+            'url' => generateFileUrl($storagePath),
+        ];
     }
 
     /**
@@ -87,4 +103,16 @@ class FileService
         return $safeName . '_' . uniqid() . '.' . $extension;
     }
 
+    static public function getFileInfoById(int $upload_id, bool $only_path = true): object|string
+    {
+        $file = \Hyperf\DbConnection\Db::table('sys_upload')
+            ->where('upload_id', $upload_id)
+            ->select(['upload_id','file_name','new_file_name','url','thumb','ext','size','mime'])
+            ->first();
+        if($file){
+            $file->url = generateFileUrl($file->url);
+            !empty($file->thumb) && $file->thumb = generateFileUrl($file->thumb);
+        }
+        return $only_path ? $file->url : $file;
+    }
 }

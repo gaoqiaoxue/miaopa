@@ -98,3 +98,33 @@ if(!function_exists('arrayToTree'))
         return $branch;
     }
 }
+
+if(!function_exists('getAvatar'))
+{
+    function getAvatar($avatar)
+    {
+        if(empty($avatar)) {
+            return \Hyperf\Support\env('FILE_HOST') . '/uploads/default_avatar.png';
+        }elseif(is_numeric($avatar)){
+            return \App\Service\FileService::getFileInfoById($avatar);
+        }else{
+            return generateFileUrl($avatar);
+        }
+    }
+}
+
+if(!function_exists('generateFileUrl'))
+{
+    function generateFileUrl($url)
+    {
+        if(empty($url)){
+            return '';
+        }elseif(preg_match('/^http(s)?:\/\//i', $url)) {
+            return $url;
+        }elseif (preg_match('/^uploads\//i', $url)) {
+            return \Hyperf\Support\env('FILE_HOST') . '/' . trim($url, '/');
+        }else{
+            return $url;
+        }
+    }
+}

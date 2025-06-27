@@ -68,12 +68,13 @@ class SysUserController extends AbstractController
         return returnSuccess();
     }
 
-    #[Scene('change_psw')]
-    public function changePassword(sysUserRequest $request):array
+    #[Scene('reset_psw')]
+    public function resetPassword(sysUserRequest $request):array
     {
         $cur_user_id = $this->request->getAttribute("user_id");
         $data = $request->validated();
-        $this->userService->changePassword($data['user_id'],$data['password'], $cur_user_id);
+        $this->userService->resetPassword($data['user_id'],$data['password'], $cur_user_id);
         return returnSuccess();
     }
+
 }

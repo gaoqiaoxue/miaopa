@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Constants\SysStatus;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
 
@@ -12,7 +13,7 @@ class SysRoleService
 {
     public function getSysRoleSelect()
     {
-        return Db::table('sys_role')->where('status',1)->select(['role_id', 'role_name'])->get();
+        return Db::table('sys_role')->where('status', SysStatus::ENABLE)->select(['role_id', 'role_name'])->get();
     }
 
     public function getSysRoleList(array $params)
@@ -64,12 +65,15 @@ class SysRoleService
         return arrayToTree($menus,0,'menu_id', 'parent_id');
     }
 
-    protected function getAllMenus(): array
+    protected function getAllMenus(array $params = []): array
     {
         $columns = ['menu_id', 'menu_name', 'parent_id', 'path', 'component', 'query', 'menu_type', 'icon', 'is_frame', 'is_cache', 'visible', 'status', 'perms',];
-        return Db::table('sys_menu')
-            ->where(['del_flag' => 0])
-            ->orderBy('order_num','asc')
+        $query = Db::table('sys_menu')
+            ->where(['del_flag' => 0]);
+        if(!empty($params['menu_ids'])){
+            $query->whereIn('menu_id', $params['menu_ids']);
+        }
+        return $query->orderBy('order_num','asc')
             ->select($columns)
             ->get()
             ->toArray();
@@ -93,7 +97,7 @@ class SysRoleService
             $role_id = Db::table('sys_role')->insertGetId([
                 'role_name' => $data['role_name'],
                 'remark' => $data['remark'],
-                'status' => 1,
+                'status' => SysStatus::ENABLE,
                 'create_by' => $data['create_by'] ?? 0,
                 'create_time' => date('Y-m-d H:i:s'),
             ]);
@@ -140,7 +144,7 @@ class SysRoleService
 
     public function changeStatus(int $role_id, int $status, int $update_by):bool
     {
-        if ($role_id == 1 && $status == 0) {
+        if ($role_id == 1 && $status == SysStatus::DISABLE->value) {
             throw new LogicException('超级管理员角色不可禁用');
         }
         $role = Db::table('sys_role')->where(['role_id' => $role_id])->first();
@@ -185,5 +189,20 @@ class SysRoleService
             throw new LogicException($ex->getMessage());
         }
         return true;
+    }
+
+
+    public function getRolePerms(int $role_id):array
+    {
+        $params = [];
+        if($role_id != 1){
+            $menu_ids = Db::table('sys_role_menu')
+                ->where(['role_id' => $role_id])
+                ->pluck('menu_id')
+                ->toArray();
+            $params['menu_ids'] = $menu_ids;
+        }
+        $menus = $this->getAllMenus($params);
+        return arrayToTree($menus,0,'menu_id', 'parent_id');
     }
 }

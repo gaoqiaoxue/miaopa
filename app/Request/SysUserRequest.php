@@ -10,10 +10,11 @@ class SysUserRequest extends FormRequest
 {
     protected array $scenes = [
         'login' => ['user_name', 'password'],
-        'add' => ['user_name', 'nick_name', 'phonenumber', 'password', 'role_id'],
-        'edit' => ['user_id', 'user_name', 'nick_name', 'phonenumber', 'role_id'],
+        'add' => ['user_name', 'nick_name', 'phonenumber', 'password', 'role_id', 'avatar'],
+        'edit' => ['user_id', 'user_name', 'nick_name', 'phonenumber', 'role_id', 'avatar'],
         'change_status' => ['user_id', 'status'],
-        'change_psw' => ['user_id', 'password'],
+        'reset_psw' => ['user_id', 'password'],
+        'change_psw' => ['password', 'new_password'],
     ];
 
     /**
@@ -37,6 +38,8 @@ class SysUserRequest extends FormRequest
             'role_id' => 'required',
             'phonenumber' => 'required|regex:/^1[3-9]\d{9}$/',
             'status' => 'required|in:0,1',
+            'avatar' => 'integer',
+            'new_password' => 'required|alpha_dash:ascii|between:6,20',
         ];
     }
 
@@ -55,6 +58,10 @@ class SysUserRequest extends FormRequest
             'phonenumber.regex' => '手机号格式错误',
             'status.required' => '请填写状态',
             'status.in' => '状态错误',
+            'avatar.integer' => '头像格式错误',
+            'new_password.required' => '请填写新密码',
+            'new_password.alpha_dash' => '密码应由字数字母下划线组成',
+            'new_password.between' => '密码长度应在6-20字符',
         ];
     }
 }

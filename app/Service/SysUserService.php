@@ -2,12 +2,15 @@
 
 namespace App\Service;
 
+use App\Constants\SysStatus;
 use App\Exception\LogicException;
 use App\Library\Contract\AuthTokenInterface;
 use Hyperf\DbConnection\Db;
+use Hyperf\Di\Annotation\Inject;
 
 class SysUserService
 {
+    #[Inject]
     protected AuthTokenInterface $authToken;
 
     public function login(array $data): array
@@ -17,13 +20,26 @@ class SysUserService
             throw new LogicException('账号不存在');
         if (!checkPassword($data['password'], $user->password))
             throw new LogicException('账号或密码错误');
+        if($user->status != SysStatus::ENABLE->value)
+            throw new LogicException('账号已被禁用');
+        $role = Db::table('sys_user_role')
+            ->leftJoin('sys_role', 'sys_user_role.role_id = sys_role.role_id')
+            ->where(['user_id'=>$user->user_id])
+            ->select(['sys_role.role_id','sys_role.role_name','sys_role.role_status'])
+            ->first();
+        if($role->status != SysStatus::ENABLE->value)
+            throw new LogicException('角色已被禁用');
         $user_data = [
             'user_id' => $user->user_id,
             'user_name' => $user->user_name,
+            'nick_name' => $user->nick_name,
+            'avatar' => getAvatar($user->avatar),
+            'role_id' => $role->role_id,
+            'role_name' => $role->role_name,
         ];
         $token = $this->authToken->createToken($user_data, 'admin');
         return [
-            'user' => $user,
+            'user' => $user_data,
             'token' => $token,
         ];
     }
@@ -75,7 +91,7 @@ class SysUserService
             ->leftJoin('sys_user_role', 'sys_user.user_id', '=', 'sys_user_role.user_id')
             ->leftJoin('sys_role', 'sys_user_role.role_id', '=', 'sys_role.role_id')
             ->where(['sys_user.user_id' => $user_id])
-            ->select(['sys_user.user_id', 'sys_user.user_name', 'sys_user.nick_name', 'sys_user.phonenumber', 'sys_user.create_time', 'sys_user.status','sys_role.role_id', 'sys_role.role_name'])
+            ->select(['sys_user.user_id', 'sys_user.user_name', 'sys_user.nick_name', 'sys_user.phonenumber','sys_user.avatar', 'sys_user.create_time', 'sys_user.status','sys_role.role_id', 'sys_role.role_name'])
             ->first();
         if (!$user) {
             throw new LogicException('用户不存在');
@@ -98,8 +114,8 @@ class SysUserService
                 'password' => setPassword($data['password']),
                 'create_time' => date('Y-m-d H:i:s'),
                 'create_by' => $data['create_by'],
-                'status' => 1,
-                'avatar' => $data['avatar'] ?? ''
+                'status' => SysStatus::ENABLE,
+                'avatar' => $data['avatar'] ?? 0
             ]);
             Db::table('sys_user_role')->insert(['user_id' => $user_id, 'role_id' => $data['role_id']]);
             Db::commit();
@@ -148,7 +164,7 @@ class SysUserService
 
     public function changeStatus(int $user_id, int $status, int $update_by): bool
     {
-        if ($user_id == 1 && $status == 0) {
+        if ($user_id == 1 && $status == SysStatus::DISABLE->value) {
             throw new LogicException('超级管理员不可禁用');
         }
         Db::table('sys_user')->where(['user_id' => $user_id])->update([
@@ -159,13 +175,29 @@ class SysUserService
         return true;
     }
 
-    public function changePassword(int $user_id, string $password, int $update_by): bool
+    public function resetPassword(int $user_id, string $password, int $update_by): bool
     {
         Db::table('sys_user')->where(['user_id' => $user_id])->update([
             'password' => setPassword($password),
             'update_by' => $update_by,
             'update_time' => date('Y-m-d H:i:s')
         ]);
+        return true;
+    }
+
+    public function changePassword(int $user_id, array $data)
+    {
+
+        $user = Db::table('sys_user')->where(['user_id' => $user_id])->first();
+        if(!$user){
+            throw new LogicException('用户不存在');
+        }
+        if(!checkPassword($data['password'], $user->password)){
+            throw new LogicException('原密码不正确');
+        }
+        Db::table('sys_user')
+            ->where(['user_id' => $user_id])
+            ->update(['password' => setPassword($data['new_password'])]);
         return true;
     }
 }
