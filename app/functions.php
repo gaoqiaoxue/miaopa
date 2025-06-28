@@ -120,7 +120,7 @@ if (!function_exists('getAvatar')) {
         if (empty($avatar)) {
             return \Hyperf\Support\env('FILE_HOST') . '/uploads/default_avatar.png';
         } elseif (is_numeric($avatar)) {
-            return \App\Service\FileService::getFileInfoById($avatar);
+            return \App\Service\FileService::getFilePathById($avatar);
         } else {
             return generateFileUrl($avatar);
         }

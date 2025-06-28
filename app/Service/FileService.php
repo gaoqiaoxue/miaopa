@@ -103,7 +103,18 @@ class FileService
         return $safeName . '_' . uniqid() . '.' . $extension;
     }
 
-    static public function getFileInfoById(int $upload_id, bool $only_path = true): object|string
+    static public function getFilePathById(int $upload_id):string
+    {
+        $path = \Hyperf\DbConnection\Db::table('sys_upload')
+            ->where('upload_id', $upload_id)
+            ->value('url');
+        if($path){
+            return generateFileUrl($path);
+        }
+        return '';
+    }
+
+    static public function getFileInfoById(int $upload_id): object|null
     {
         $file = \Hyperf\DbConnection\Db::table('sys_upload')
             ->where('upload_id', $upload_id)
@@ -113,6 +124,40 @@ class FileService
             $file->url = generateFileUrl($file->url);
             !empty($file->thumb) && $file->thumb = generateFileUrl($file->thumb);
         }
-        return $only_path ? $file->url : $file;
+        return null;
+    }
+
+    public static function getFilepathByIds(array $upload_ids):array
+    {
+        $files = \Hyperf\DbConnection\Db::table('sys_upload')
+            ->whereIn('upload_id', $upload_ids)
+            ->pluck('url','upload_id')
+            ->toArray();
+        if($files){
+            foreach ($files as $key => $file) {
+                $files[$key] = generateFileUrl($file);
+            }
+            return $files;
+        }
+        return [];
+    }
+
+    public static function getFileInfoByIds(array $upload_ids):array
+    {
+        $files = \Hyperf\DbConnection\Db::table('sys_upload')
+            ->whereIn('upload_id', $upload_ids)
+            ->select(['upload_id','file_name','new_file_name','url','thumb','ext','size','mime'])
+            ->get()
+            ->toArray();
+        if($files){
+            $result = [];
+            foreach ($files as $file) {
+                $file->url = generateFileUrl($file->url);
+                !empty($file->thumb) && $file->thumb = generateFileUrl($file->thumb);
+                $result[$file->upload_id] = $file;
+            }
+            return $result;
+        }
+        return [];
     }
 }
