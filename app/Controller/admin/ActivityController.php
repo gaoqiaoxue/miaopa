@@ -4,8 +4,8 @@ namespace App\Controller\admin;
 
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
-use App\Request\CircleRequest;
-use App\Service\CircleService;
+use App\Request\ActivityRequest;
+use App\Service\ActivityService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
@@ -13,36 +13,37 @@ use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
 #[Middleware(AdminMiddleware::class)]
-class CircleController extends AbstractController
+class ActivityController extends AbstractController
 {
     #[Inject]
-    protected CircleService $service;
+    protected ActivityService $service;
 
-    public function getList():array
+    public function getList(): array
     {
         $params = $this->request->all();
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }
 
-    public function getInfo():array
+    #[Scene('id')]
+    public function getInfo(ActivityRequest $request): array
     {
-        $circle_id = $this->request->input('circle_id', 0);
-        $circle = $this->service->getInfo($circle_id);
-        return returnSuccess($circle);
+        $activity_id = $request->input('activity_id', 0);
+        $activity = $this->service->getInfo($activity_id);
+        return returnSuccess($activity);
     }
 
     #[Scene('add')]
-    public function add(CircleRequest $request):array
+    public function add(ActivityRequest $request): array
     {
         $data = $request->validated();
         $data['create_by'] =  $this->request->getAttribute("user_id");
         $result = $this->service->add($data);
-        return returnSuccess($result);
+        return returnSuccess(['id' => $result]);
     }
 
     #[Scene('edit')]
-    public function edit(CircleRequest $request):array
+    public function edit(ActivityRequest $request): array
     {
         $data = $request->validated();
         $this->service->edit($data);
@@ -50,24 +51,19 @@ class CircleController extends AbstractController
     }
 
     #[Scene('change_status')]
-    public function changeStatus(CircleRequest $request):array
+    public function changeStatus(ActivityRequest $request): array
     {
         $data = $request->validated();
-        $this->service->changeStatus($data['circle_id'], $data['status']);
+        $this->service->changeStatus($data['activity_id'], $data['status']);
         return returnSuccess();
     }
 
-    public function getUsers():array
+    #[Scene('id')]
+    public function getUsers(ActivityRequest $request): array
     {
-        $params = $this->request->all();
-        $list = $this->service->getFollowUsers($params);
+        $params = $request->all();
+        $list = $this->service->getUsers($params);
         return returnSuccess($list);
     }
 
-    public function getPosts():array
-    {
-        $params = $this->request->all();
-        $list = $this->service->getPosts($params);
-        return returnSuccess($list);
-    }
 }

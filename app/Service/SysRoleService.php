@@ -2,7 +2,7 @@
 
 namespace App\Service;
 
-use App\Constants\SysStatus;
+use App\Constants\AbleStatus;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
 
@@ -13,7 +13,7 @@ class SysRoleService
 {
     public function getSysRoleSelect()
     {
-        return Db::table('sys_role')->where('status', SysStatus::ENABLE)->select(['role_id', 'role_name'])->get();
+        return Db::table('sys_role')->where('status', AbleStatus::ENABLE)->select(['role_id', 'role_name'])->get();
     }
 
     public function getSysRoleList(array $params)
@@ -97,7 +97,7 @@ class SysRoleService
             $role_id = Db::table('sys_role')->insertGetId([
                 'role_name' => $data['role_name'],
                 'remark' => $data['remark'],
-                'status' => SysStatus::ENABLE,
+                'status' => AbleStatus::ENABLE,
                 'create_by' => $data['create_by'] ?? 0,
                 'create_time' => date('Y-m-d H:i:s'),
             ]);
@@ -144,7 +144,7 @@ class SysRoleService
 
     public function changeStatus(int $role_id, int $status, int $update_by):bool
     {
-        if ($role_id == 1 && $status == SysStatus::DISABLE->value) {
+        if ($role_id == 1 && $status == AbleStatus::DISABLE->value) {
             throw new LogicException('超级管理员角色不可禁用');
         }
         $role = Db::table('sys_role')->where(['role_id' => $role_id])->first();

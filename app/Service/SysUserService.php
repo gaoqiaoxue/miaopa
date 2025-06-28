@@ -2,7 +2,7 @@
 
 namespace App\Service;
 
-use App\Constants\SysStatus;
+use App\Constants\AbleStatus;
 use App\Exception\LogicException;
 use App\Library\Contract\AuthTokenInterface;
 use Hyperf\DbConnection\Db;
@@ -20,14 +20,14 @@ class SysUserService
             throw new LogicException('账号不存在');
         if (!checkPassword($data['password'], $user->password))
             throw new LogicException('账号或密码错误');
-        if ($user->status != SysStatus::ENABLE->value)
+        if ($user->status != AbleStatus::ENABLE->value)
             throw new LogicException('账号已被禁用');
         $role = Db::table('sys_user_role')
             ->leftJoin('sys_role', 'sys_user_role.role_id = sys_role.role_id')
             ->where(['user_id' => $user->user_id])
             ->select(['sys_role.role_id', 'sys_role.role_name', 'sys_role.role_status'])
             ->first();
-        if ($role->status != SysStatus::ENABLE->value)
+        if ($role->status != AbleStatus::ENABLE->value)
             throw new LogicException('角色已被禁用');
         $user_data = [
             'user_id' => $user->user_id,
@@ -119,7 +119,7 @@ class SysUserService
                 'password' => setPassword($data['password']),
                 'create_time' => date('Y-m-d H:i:s'),
                 'create_by' => $data['create_by'],
-                'status' => SysStatus::ENABLE,
+                'status' => AbleStatus::ENABLE,
                 'avatar' => $data['avatar'] ?? 0
             ]);
             Db::table('sys_user_role')->insert(['user_id' => $user_id, 'role_id' => $data['role_id']]);
@@ -169,7 +169,7 @@ class SysUserService
 
     public function changeStatus(int $user_id, int $status, int $update_by): bool
     {
-        if ($user_id == 1 && $status == SysStatus::DISABLE->value) {
+        if ($user_id == 1 && $status == AbleStatus::DISABLE->value) {
             throw new LogicException('超级管理员不可禁用');
         }
         Db::table('sys_user')->where(['user_id' => $user_id])->update([

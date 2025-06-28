@@ -37,7 +37,7 @@ class CircleRequest extends FormRequest
             'name' => 'required',
             'circle_type' => 'required|in:1,2,3',
             'is_hot' => 'required|in:0,1',
-            'weight' => '|integer',
+            'weight' => 'integer',
             'status' => 'required|in:0,1',
             'relation_type' => 'in:circle,role',
             'relation_ids' => 'array',

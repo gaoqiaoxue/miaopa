@@ -7,24 +7,24 @@ use Hyperf\Constants\Annotation\Message;
 use Hyperf\Constants\EnumConstantsTrait;
 
 /**
- * 圈子关联类型
+ * 启用禁用状态
  */
 #[Constants]
-enum CircleReferType: int
+enum AbleStatus: int
 {
     use EnumConstantsTrait;
 
-    #[Message('圈子')]
-    case CIRCLE = 1;
+    #[Message('启用')]
+    case ENABLE = 1;
 
-    #[Message('角色')]
-    case ROLE = 2;
+    #[Message('禁用')]
+    case DISABLE = 0;
 
     public static function getMaps(): array
     {
         return [
-            self::CIRCLE->value => self::CIRCLE->name,
-            self::ROLE->value => self::ROLE->name,
+            self::ENABLE->value => self::ENABLE->name,
+            self::DISABLE->value => self::DISABLE->name,
         ];
     }
 
