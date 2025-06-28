@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Exception\ParametersException;
+use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 
 class RegionService
@@ -17,6 +18,7 @@ class RegionService
             ->value($field);
     }
 
+    #[Cacheable(prefix: 'region_tree', ttl: 3600)]
     public function getTree(): array
     {
         $all = Db::table('sys_region')

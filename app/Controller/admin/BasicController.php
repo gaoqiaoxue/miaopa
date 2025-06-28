@@ -33,7 +33,7 @@ class BasicController extends AbstractController
             'role_type' => RoleType::getMaps(),
             'activity_type' => ActivityType::getMaps(),
             'activity_status' => ActiveStatus::getMaps(),
-            'virtual_type' => VirtualType::getMaps(),
+            'item_type' => VirtualType::getMaps(),
             'sex' => Sex::getMaps()
         ];
     }
