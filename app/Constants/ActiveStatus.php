@@ -27,9 +27,9 @@ enum ActiveStatus: int
     public static function getMaps(): array
     {
         return [
-            self::NOT_START->value => self::NOT_START->name,
-            self::ONGOING->value => self::ONGOING->name,
-            self::ENDED->value => self::ENDED->name,
+            self::NOT_START->value => self::NOT_START->getMessage(),
+            self::ONGOING->value => self::ONGOING->getMessage(),
+            self::ENDED->value => self::ENDED->getMessage(),
         ];
     }
 

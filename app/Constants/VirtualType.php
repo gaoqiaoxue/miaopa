@@ -20,8 +20,8 @@ enum VirtualType: int
     public static function getMaps(): array
     {
         return [
-            self::FIGURE->value => self::FIGURE->name,
-            self::MEDAL->value => self::MEDAL->name,
+            self::FIGURE->value => self::FIGURE->getMessage(),
+            self::MEDAL->value => self::MEDAL->getMessage(),
         ];
     }
 }

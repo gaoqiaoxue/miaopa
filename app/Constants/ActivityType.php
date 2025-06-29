@@ -20,7 +20,7 @@ enum ActivityType: int
     public static function getMaps(): array
     {
         return [
-            self::COMIC_CON->value => self::COMIC_CON->name,
+            self::COMIC_CON->value => self::COMIC_CON->getMessage(),
         ];
     }
 

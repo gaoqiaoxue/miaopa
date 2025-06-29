@@ -64,6 +64,9 @@ class ActivityService
         $info->bg_url = FileService::getFilePathById($info->bg);
         $info->cover_url = FileService::getFilePathById($info->cover);
         $info->tags = json_decode($info->tags, true);
+        $info->creater_name = Db::table('sys_user')
+            ->where('user_id', '=', $info->create_by)
+            ->value('nick_name');
         return $info;
     }
 

@@ -23,8 +23,8 @@ enum CircleRelationType: string
     public static function getMaps(): array
     {
         return [
-            self::CIRCLE->value => self::CIRCLE->name,
-            self::ROLE->value => self::ROLE->name,
+            self::CIRCLE->value => self::CIRCLE->getMessage(),
+            self::ROLE->value => self::ROLE->getMessage(),
         ];
     }
 

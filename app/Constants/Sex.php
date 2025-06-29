@@ -26,9 +26,9 @@ enum Sex: int
     public static function getMaps(): array
     {
         return [
-            self::UNKNOWN->value => self::UNKNOWN->name,
-            self::MALE->value => self::MALE->name,
-            self::FEMALE->value => self::FEMALE->name,
+            self::UNKNOWN->value => self::UNKNOWN->getMessage(),
+            self::MALE->value => self::MALE->getMessage(),
+            self::FEMALE->value => self::FEMALE->getMessage(),
         ];
     }
 }

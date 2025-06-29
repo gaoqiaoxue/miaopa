@@ -1,0 +1,120 @@
+<?php
+
+namespace App\Service;
+
+use App\Constants\RoleType;
+use App\Exception\LogicException;
+use Hyperf\DbConnection\Db;
+
+class RoleService
+{
+
+    public function getList(array $params): array
+    {
+        $query = Db::table('role');
+        if (!empty($params['name'])) {
+            $query->where('name', 'like', '%' . $params['name'] . '%');
+        }
+        if (!empty($params['role_type'])) {
+            $query->where('role_type', '=', $params['role_type']);
+        }
+        if (isset($params['status']) && in_array($params['status'], [0, 1])) {
+            $query->where('status', '=', $params['status']);
+        }
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
+            $query->whereBetween('create_time', [$params['start_time'], $params['end_time']]);
+        }
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 10;
+        $list = $query->select(['id', 'name', 'alias', 'cover', 'role_type', 'author', 'circle_id', 'weight',
+            'images', 'description', 'status', 'source', 'create_by', 'create_time'])
+            ->orderBy('id', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($list);
+        if (!empty($data['items'])) {
+            $covers = array_column($data['items'], 'cover');
+            $covers = FileService::getFilepathByIds($covers);
+            $circle_ids = array_column($data['items'], 'circle_id');
+            $cirlces = Db::table('circle')
+                ->whereIn('id', $circle_ids)
+                ->pluck('name', 'id')
+                ->toArray();
+            $role_types = RoleType::getMaps();
+            foreach ($data['items'] as $item) {
+                $item->role_type_name = $role_types[$item->role_type] ?? '';
+                $item->cover_url = $covers[$item->cover] ?? '';
+                $item->circle_name = $cirlces[$item->circle_id] ?? '';
+            }
+        }
+        return $data;
+    }
+
+    public function getInfo(int $role_id): object
+    {
+        $info = Db::table('role')
+            ->where(['id' => $role_id])
+            ->select(['id', 'name', 'alias', 'cover', 'role_type', 'author', 'circle_id', 'weight',
+                'images', 'description', 'status', 'source', 'create_by', 'create_time'])
+            ->first();
+        if (!$info) {
+            throw new LogicException('角色不存在');
+        }
+        $info->cover_url = FileService::getFilePathById($info->cover);
+        $images = explode(',', $info->images);
+        $info->images = FileService::getFileInfoByIds($images);
+        $info->circle_name = Db::table('circle')
+            ->where('id', '=', $info->circle_id)
+            ->value('name');
+        if($info->source == 'admin'){
+            $info->creater_name = Db::table('sys_user')
+                ->where('user_id', '=', $info->create_by)
+                ->value('nick_name');
+        }else{
+            $info->creater_name = Db::table('user')
+                ->where('id', '=', $info->create_by)
+                ->value('nickname');
+        }
+        return $info;
+    }
+
+    public function add(array $params, $create_by = 0, $source = 'admin'): int
+    {
+        $data = $this->generalData($params, true, $create_by, $source);
+        return Db::table('role')->insertGetId($data);
+    }
+
+    public function edit(array $params): int
+    {
+        $data = $this->generalData($params);
+        $role_id = $params['role_id'];
+        return Db::table('role')->where('id', '=', $role_id)->update($data);
+    }
+
+    protected function generalData(array $params, bool $is_add = false, $create_by = 0, $source = 'admin'): array
+    {
+        $data = [
+            'name' => $params['name'],
+            'alias' => $params['alias'] ?? '',
+            'cover' => $params['cover'] ?? 0,
+            'role_type' => $params['role_type'] ?? 0,
+            'author' => $params['author'] ?? '',
+            'circle_id' => $params['circle_id'] ?? 0,
+            'weight' => $params['weight'] ?? 100,
+            'description' => $params['description'] ?? '',
+            'images' => implode(',', empty($params['images']) ? [] : $params['images']),
+            'status' => $params['status'] ?? 0,
+            'update_time' => date('Y-m-d H:i:s'),
+        ];
+        if ($is_add) {
+            $data['create_time'] = date('Y-m-d H:i:s');
+            $data['create_by'] = $create_by;
+            $data['source'] = $source;
+        }
+        return $data;
+    }
+
+    public function changeStatus(int $role_id, int $status): int
+    {
+        return Db::table('role')->where('id', '=', $role_id)->update(['status' => $status]);
+    }
+}

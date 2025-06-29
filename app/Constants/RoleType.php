@@ -23,8 +23,8 @@ enum RoleType: int
     public static function getMaps(): array
     {
         return [
-            self::CARTOON->value => self::CARTOON->name,
-            self::GAME->value => self::GAME->name,
+            self::CARTOON->value => self::CARTOON->getMessage(),
+            self::GAME->value => self::GAME->getMessage(),
         ];
     }
 }

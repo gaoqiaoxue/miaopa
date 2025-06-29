@@ -21,8 +21,8 @@ enum ErrorCode:int
     public static function getMaps(): array
     {
         return [
-            self::SERVER_ERROR->value => self::SERVER_ERROR->name,
-            self::UNAUTHORIZED->value => self::UNAUTHORIZED->name,
+            self::SERVER_ERROR->value => self::SERVER_ERROR->getMessage(),
+            self::UNAUTHORIZED->value => self::UNAUTHORIZED->getMessage(),
         ];
     }
 

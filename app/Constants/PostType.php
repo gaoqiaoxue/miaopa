@@ -23,8 +23,8 @@ enum PostType: int
     public static function getMaps(): array
     {
         return [
-            self::DYNAMIC->value => self::DYNAMIC->name,
-            self::QA->value => self::QA->name,
+            self::DYNAMIC->value => self::DYNAMIC->getMessage(),
+            self::QA->value => self::QA->getMessage(),
         ];
     }
 }

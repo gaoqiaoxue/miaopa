@@ -26,9 +26,9 @@ enum CircleType: int
     public static function getMaps(): array
     {
         return [
-            self::CIRCLE->value => self::CIRCLE->name,
-            self::CARTOON->value => self::CARTOON->name,
-            self::GAME->value => self::GAME->name,
+            self::CIRCLE->value => self::CIRCLE->getMessage(),
+            self::CARTOON->value => self::CARTOON->getMessage(),
+            self::GAME->value => self::GAME->getMessage(),
         ];
     }
 }

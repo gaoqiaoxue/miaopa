@@ -23,8 +23,8 @@ enum AbleStatus: int
     public static function getMaps(): array
     {
         return [
-            self::ENABLE->value => self::ENABLE->name,
-            self::DISABLE->value => self::DISABLE->name,
+            self::ENABLE->value => self::ENABLE->getMessage(),
+            self::DISABLE->value => self::DISABLE->getMessage(),
         ];
     }
 

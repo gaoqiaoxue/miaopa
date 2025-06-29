@@ -26,9 +26,9 @@ enum ActivityUserStatus: int
     public static function getMaps(): array
     {
         return [
-            self::WAIT_PAY->value => self::WAIT_PAY->name,
-            self::JOINED->value => self::JOINED->name,
-            self::CANCEL->value => self::CANCEL->name,
+            self::WAIT_PAY->value => self::WAIT_PAY->getMessage(),
+            self::JOINED->value => self::JOINED->getMessage(),
+            self::CANCEL->value => self::CANCEL->getMessage(),
         ];
     }
 
