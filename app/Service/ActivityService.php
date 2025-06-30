@@ -44,10 +44,10 @@ class ActivityService
         if (!empty($params['activity_type'])) {
             $query->where('activity_type', '=', $params['activity_type']);
         }
-        if (isset($params['status']) && in_array($params['status'], AbleStatus::cases())) {
+        if (isset($params['status']) && in_array($params['status'], AbleStatus::getKeys())) {
             $query->where('status', '=', $params['status']);
         }
-        if (isset($params['active_status']) && in_array($params['active_status'], ActiveStatus::cases())) {
+        if (isset($params['active_status']) && in_array($params['active_status'], ActiveStatus::getKeys())) {
             $query->where('active_status', '=', $params['active_status']);
         }
         if (!empty($params['start_time']) && !empty($params['end_time'])) {

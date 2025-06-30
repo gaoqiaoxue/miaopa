@@ -33,4 +33,13 @@ enum ActiveStatus: int
         ];
     }
 
+    public static function getKeys():array
+    {
+        return [
+            self::NOT_START->value,
+            self::ONGOING->value,
+            self::ENDED->value,
+        ];
+    }
+
 }

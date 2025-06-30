@@ -26,4 +26,12 @@ enum ErrorCode:int
         ];
     }
 
+    public static function getKeys():array
+    {
+        return [
+            self::SERVER_ERROR->value,
+            self::UNAUTHORIZED->value,
+        ];
+    }
+
 }

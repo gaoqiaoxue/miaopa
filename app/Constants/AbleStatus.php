@@ -28,4 +28,12 @@ enum AbleStatus: int
         ];
     }
 
+    public static function getKeys():array
+    {
+        return [
+            self::ENABLE->value,
+            self::DISABLE->value,
+        ];
+    }
+
 }

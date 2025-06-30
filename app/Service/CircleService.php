@@ -14,6 +14,15 @@ class CircleService
     #[Inject]
     protected FileService $fileService;
 
+    public function getSelect()
+    {
+        return Db::table('circle')
+            ->select(['id', 'name'])
+            ->orderBy('weight', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+    }
+
     public function getList($params = [])
     {
         $query = Db::table('circle');
@@ -23,7 +32,7 @@ class CircleService
         if (!empty($params['circle_type'])) {
             $query->where('circle_type', $params['circle_type']);
         }
-        if (isset($params['status']) && in_array($params["status"], AbleStatus::cases())) {
+        if (isset($params['status']) && in_array($params["status"], AbleStatus::getKeys())) {
             $query->where('status', '=', $params['status']);
         }
         if (!empty($params['start_time']) && !empty($params['end_time'])) {

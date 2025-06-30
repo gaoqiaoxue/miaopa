@@ -33,4 +33,12 @@ enum AuditStatus: int
         ];
     }
 
+    public static function getKeys():array
+    {
+        return [
+            self::PENDING->value,
+            self::PUBLISHED->value,
+            self::REJECTED->value,
+        ];
+    }
 }

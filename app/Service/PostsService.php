@@ -35,7 +35,7 @@ class PostsService
         if(!empty($params['nickname'])){
             $query->where('user.nickname', 'like', '%' . $params['nickname'] . '%');
         }
-        if(isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::cases())) {
+        if(isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
             $query->where('post.status', '=', $params['status']);
         }
         if (!empty($params['start_time']) && !empty($params['end_time'])) {

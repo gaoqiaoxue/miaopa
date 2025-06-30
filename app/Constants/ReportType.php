@@ -6,30 +6,33 @@ use Hyperf\Constants\Annotation\Constants;
 use Hyperf\Constants\Annotation\Message;
 use Hyperf\Constants\EnumConstantsTrait;
 
+/**
+ * 举报类型
+ */
 #[Constants]
-enum VirtualType: int
+enum ReportType: int
 {
     use EnumConstantsTrait;
 
-    #[Message('次元形象')]
-    case FIGURE = 1;
+    #[Message('帖子')]
+    case POST = 1;
 
-    #[Message('勋章')]
-    case MEDAL = 2;
+    #[Message('评论')]
+    case COMMENT = 2;
 
     public static function getMaps(): array
     {
         return [
-            self::FIGURE->value => self::FIGURE->getMessage(),
-            self::MEDAL->value => self::MEDAL->getMessage(),
+            self::POST->value => self::POST->name,
+            self::COMMENT->value => self::COMMENT->name,
         ];
     }
 
     public static function getKeys():array
     {
         return [
-            self::FIGURE->value,
-            self::MEDAL->value,
+            self::POST->value,
+            self::COMMENT->value,
         ];
     }
 }

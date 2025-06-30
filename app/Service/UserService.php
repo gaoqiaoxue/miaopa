@@ -65,7 +65,7 @@ class UserService
         if (!empty($params['mobile'])) {
             $query->where('mobile', 'like', '%' . $params['mobile'] . '%');
         }
-        if (isset($params['sex']) && in_array($params['sex'], Sex::cases())) {
+        if (isset($params['sex']) && in_array($params['sex'], Sex::getKeys())) {
             $query->where('sex', '=', $params['sex']);
         }
         if (!empty($params['id'])) {

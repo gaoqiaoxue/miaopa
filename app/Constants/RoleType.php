@@ -27,4 +27,12 @@ enum RoleType: int
             self::GAME->value => self::GAME->getMessage(),
         ];
     }
+
+    public static function getKeys():array
+    {
+        return [
+            self::CARTOON->value,
+            self::GAME->value,
+        ];
+    }
 }

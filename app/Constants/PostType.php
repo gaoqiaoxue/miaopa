@@ -27,4 +27,12 @@ enum PostType: int
             self::QA->value => self::QA->getMessage(),
         ];
     }
+
+    public static function getKeys():array
+    {
+        return [
+            self::DYNAMIC->value,
+            self::QA->value,
+        ];
+    }
 }

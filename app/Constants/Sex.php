@@ -31,4 +31,13 @@ enum Sex: int
             self::FEMALE->value => self::FEMALE->getMessage(),
         ];
     }
+
+    public static function getKeys():array
+    {
+        return [
+            self::UNKNOWN->value,
+            self::MALE->value,
+            self::FEMALE->value,
+        ];
+    }
 }

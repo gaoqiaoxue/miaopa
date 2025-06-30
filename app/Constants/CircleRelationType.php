@@ -28,4 +28,12 @@ enum CircleRelationType: string
         ];
     }
 
+    public static function getKeys():array
+    {
+        return [
+            self::CIRCLE->value,
+            self::ROLE->value,
+        ];
+    }
+
 }

@@ -31,4 +31,13 @@ enum CircleType: int
             self::GAME->value => self::GAME->getMessage(),
         ];
     }
+
+    public static function getKeys():array
+    {
+        return [
+            self::CIRCLE->value,
+            self::CARTOON->value,
+            self::GAME->value,
+        ];
+    }
 }

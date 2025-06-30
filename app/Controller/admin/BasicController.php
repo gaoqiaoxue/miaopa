@@ -5,9 +5,12 @@ namespace App\Controller\admin;
 use App\Constants\AbleStatus;
 use App\Constants\ActiveStatus;
 use App\Constants\ActivityType;
+use App\Constants\AuditStatus;
 use App\Constants\CircleRelationType;
 use App\Constants\CircleType;
 use App\Constants\PostType;
+use App\Constants\ReportReason;
+use App\Constants\ReportType;
 use App\Constants\RoleType;
 use App\Constants\Sex;
 use App\Constants\VirtualType;
@@ -34,7 +37,10 @@ class BasicController extends AbstractController
             'activity_type' => ActivityType::getMaps(),
             'activity_status' => ActiveStatus::getMaps(),
             'item_type' => VirtualType::getMaps(),
-            'sex' => Sex::getMaps()
+            'sex' => Sex::getMaps(),
+            'audit_status' => AuditStatus::getMaps(),
+            'report_type' => ReportType::getMaps(),
+            'report_reason' => ReportReason::getMaps(),
         ];
     }
 

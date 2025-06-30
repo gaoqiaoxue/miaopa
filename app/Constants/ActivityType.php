@@ -24,4 +24,11 @@ enum ActivityType: int
         ];
     }
 
+    public static function getKeys():array
+    {
+        return [
+            self::COMIC_CON->value,
+        ];
+    }
+
 }

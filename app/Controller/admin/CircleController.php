@@ -18,6 +18,12 @@ class CircleController extends AbstractController
     #[Inject]
     protected CircleService $service;
 
+    public function getSelect()
+    {
+        $list = $this->service->getSelect();
+        return returnSuccess($list);
+    }
+
     public function getList():array
     {
         $params = $this->request->all();

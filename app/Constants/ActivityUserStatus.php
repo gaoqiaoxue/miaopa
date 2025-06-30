@@ -32,4 +32,13 @@ enum ActivityUserStatus: int
         ];
     }
 
+    public static function getKeys():array
+    {
+        return [
+            self::WAIT_PAY->value,
+            self::JOINED->value,
+            self::CANCEL->value,
+        ];
+    }
+
 }
