@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Constants\AbleStatus;
 use App\Constants\CircleRelationType;
+use App\Constants\PostType;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
@@ -58,8 +59,16 @@ class CircleService
         $circle->bg_url = $this->fileService->getFilePathById($circle->bg);
         $circle->cover_url = $this->fileService->getFilePathById($circle->cover);
         $circle->relations = $this->getRelations($circle->relation_type, json_decode($circle->relation_ids, true));
-        // TODO 圈子动态贴，问答帖统计
 
+        $post_counts = Db::table('post')
+            ->where('circle_id', $circle_id)
+            ->groupBy('post_type')
+            ->select(['post_type', Db::raw('count(*) as count')])
+            ->get()
+            ->toArray();
+        $post_counts = array_column($post_counts, 'count', 'post_type');
+        $circle->dynamic_post_count = $post_counts[PostType::DYNAMIC->value] ?? 0;
+        $circle->question_post_count = $post_counts[PostType::QA->value] ?? 0;
         return $circle;
     }
 
@@ -139,10 +148,10 @@ class CircleService
         if (!empty($params['nickname'])) {
             $query->where('user.nickname', 'like', '%' . $params['nickname'] . '%');
         }
-        if(!empty($params['sex'])){
-            $query->where('user.sex', '=',  $params['sex']);
+        if (!empty($params['sex'])) {
+            $query->where('user.sex', '=', $params['sex']);
         }
-        if(!empty($params['start_time']) && !empty($params['end_time'])){
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
             $query->whereBetween('circle_follow.create_time', [$params['start_time'], $params['end_time']]);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
@@ -152,11 +161,6 @@ class CircleService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         return $data;
-    }
-
-    public function getPosts(array $params): array
-    {
-        // TODO 圈子帖子列表
     }
 
 }

@@ -43,7 +43,7 @@ class PostsService
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['post.id', 'post.title', 'post.post_type', 'post.circle_id', 'circle.name as circle_name', 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
+        $data = $query->select(['post.id', 'post.title','post.content', 'post.post_type', 'post.comment_count', 'post.circle_id', 'circle.name as circle_name', 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
             ->orderBy('post.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);

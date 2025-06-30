@@ -6,6 +6,7 @@ use App\Constants\AbleStatus;
 use App\Constants\ActiveStatus;
 use App\Constants\ActivityUserStatus;
 use App\Exception\ParametersException;
+use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
@@ -16,8 +17,22 @@ class ActivityService
 
     public function __construct()
     {
-        // TODO 根据活动时间更新活动状态
+        $this->checkStatus();
+    }
 
+    #[Cacheable(prefix: 'activity_status', ttl: 60)]
+    protected function checkStatus()
+    {
+        $current = time();
+        Db::table('activity')
+            ->where('active_status', ActiveStatus::NOT_START)
+            ->where('start', '<', $current)
+            ->update(['active_status' => ActiveStatus::ONGOING]);
+        Db::table('activity')
+            ->where('active_status', ActiveStatus::ONGOING)
+            ->where('end', '<', $current)
+            ->update(['active_status' => ActiveStatus::ENDED]);
+        return true;
     }
 
     public function getList(array $params)

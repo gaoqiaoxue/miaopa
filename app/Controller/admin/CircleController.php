@@ -63,11 +63,4 @@ class CircleController extends AbstractController
         $list = $this->service->getFollowUsers($params);
         return returnSuccess($list);
     }
-
-    public function getPosts():array
-    {
-        $params = $this->request->all();
-        $list = $this->service->getPosts($params);
-        return returnSuccess($list);
-    }
 }
