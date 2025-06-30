@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Constants\AuditStatus;
+use App\Constants\AuditType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
@@ -11,6 +12,9 @@ class PostsService
 {
     #[Inject]
     protected FileService $fileService;
+
+    #[Inject]
+    protected AuditService $auditService;
 
     public function getList(array $params): array
     {
@@ -32,18 +36,23 @@ class PostsService
         if (!empty($params['user_id'])) {
             $query->where('post.user_id', '=', $params['user_id']);
         }
-        if(!empty($params['nickname'])){
+        if (!empty($params['nickname'])) {
             $query->where('user.nickname', 'like', '%' . $params['nickname'] . '%');
         }
-        if(isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
+        if (isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
             $query->where('post.status', '=', $params['status']);
+        }
+        if(!empty($params['source'])){
+            $query->where('post.source', '=', $params['source']);
         }
         if (!empty($params['start_time']) && !empty($params['end_time'])) {
             $query->whereBetween('post.create_time', [$params['start_time'], $params['end_time']]);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['post.id', 'post.title','post.content', 'post.post_type', 'post.comment_count', 'post.circle_id', 'circle.name as circle_name', 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
+        $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
+            'post.audit_status', 'post.circle_id', 'circle.name as circle_name',
+            'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
             ->orderBy('post.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
@@ -57,15 +66,17 @@ class PostsService
             ->leftJoin('circle', 'circle.id', '=', 'post.circle_id')
             ->leftJoin('user', 'user.id', '=', 'post.user_id')
             ->where('post.id', '=', $post_id)
-            ->select(['post.id', 'post.title', 'post.content', 'post.media', 'post.post_type', 'post.circle_id', 'circle.name as circle_name', 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
+            ->select(['post.id', 'post.title', 'post.content', 'post.media', 'post.post_type',
+                'post.audit_status', 'post.audit_result', 'post.circle_id', 'circle.name as circle_name',
+                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
             ->first();
         if (!$post) {
             throw new LogicException('帖子不存在');
         }
-        if(!empty($post->media)){
+        if (!empty($post->media)) {
             $media = explode(',', $post->media);
             $post->media_urls = $this->fileService->getFileInfoByIds($media);
-        }else{
+        } else {
             $post->media_urls = [];
         }
         return $post;
@@ -77,5 +88,51 @@ class PostsService
             'del_flag' => 1,
             'update_time' => date('Y-m-d H:i:s')
         ]);
+    }
+
+    public function pass(int $post_id, int $cur_user_id): bool
+    {
+        $post = Db::table('post')
+            ->where('id', '=', $post_id)
+            ->first(['id', 'source', 'audit_status']);
+        if ($post->audit_status != AuditStatus::PENDING->value) {
+            throw new LogicException('帖子已经审核过了');
+        }
+        Db::beginTransaction();
+        try {
+            Db::table('post')->where('id', '=', $post_id)->update([
+                'audit_status' => AuditStatus::PUBLISHED->value,
+                'update_time' => date('Y-m-d H:i:s'),
+            ]);
+            $this->auditService->pass(AuditType::POST->value,$post_id,$cur_user_id);
+            Db::commit();
+        }catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+        return true;
+    }
+
+    public function reject(int $post_id, int $cur_user_id, string $reject_reason)
+    {
+        $post = Db::table('post')
+            ->where('id', '=', $post_id)
+            ->first(['id', 'audit_status']);
+        if ($post->audit_status != AuditStatus::PENDING->value) {
+            throw new LogicException('该角色已经审核过了');
+        }
+        Db::beginTransaction();
+        try {
+            Db::table('post')->where('id', '=', $post_id)->update([
+                'audit_status' => AuditStatus::REJECTED->value,
+                'audit_result' => $reject_reason,
+            ]);
+            $this->auditService->reject(AuditType::POST->value,$post_id,$cur_user_id,$reject_reason);
+            Db::commit();
+        }catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+        return true;
     }
 }

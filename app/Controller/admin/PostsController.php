@@ -2,6 +2,7 @@
 
 namespace App\Controller\admin;
 
+use App\Constants\AuditStatus;
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
 use App\Request\PostsRequest;
@@ -21,6 +22,15 @@ class PostsController extends AbstractController
     public function getList(): array
     {
         $params = $this->request->all();
+        $params['audit_status'] = AuditStatus::PUBLISHED->value;
+        $list = $this->service->getList($params);
+        return returnSuccess($list);
+    }
+
+    public function getAuditList(): array
+    {
+        $params = $this->request->all();
+        $params['source'] = 'user';
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }
@@ -41,4 +51,21 @@ class PostsController extends AbstractController
         return returnSuccess();
     }
 
+    #[Scene('id')]
+    public function pass(PostsRequest $request)
+    {
+        $post_id = $request->input('post_id');
+        $cur_user_id = $this->request->getAttribute('user_id');
+        $this->service->pass($post_id, $cur_user_id);
+        return returnSuccess();
+    }
+
+    #[Scene('id')]
+    public function reject(PostsRequest $request)
+    {
+        $params =  $request->all();
+        $cur_user_id = $this->request->getAttribute('user_id');
+        $this->service->reject($params['post_id'], $cur_user_id, (string) $params['reject_reason'] ??'');
+        return returnSuccess();
+    }
 }

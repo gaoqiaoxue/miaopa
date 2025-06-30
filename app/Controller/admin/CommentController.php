@@ -2,6 +2,7 @@
 
 namespace App\Controller\admin;
 
+use App\Constants\AuditStatus;
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
 use App\Request\CommentRequest;
@@ -22,6 +23,15 @@ class CommentController extends AbstractController
     public function getList(): array
     {
         $params = $this->request->all();
+        $params['audit_status'] = AuditStatus::PUBLISHED->value;
+        $list = $this->service->getList($params);
+        return returnSuccess($list);
+    }
+
+    public function getAuditList(): array
+    {
+        $params = $this->request->all();
+        $params['source'] = 'user';
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }
@@ -48,6 +58,24 @@ class CommentController extends AbstractController
     {
         $params = $request->validated();
         $this->service->setTop($params['comment_id'], $params['is_top'] ?? 1);
+        return returnSuccess();
+    }
+
+    #[Scene('id')]
+    public function pass(CommentRequest $request)
+    {
+        $comment_id = $request->input('comment_id');
+        $cur_user_id = $this->request->getAttribute('user_id');
+        $this->service->pass($comment_id, $cur_user_id);
+        return returnSuccess();
+    }
+
+    #[Scene('id')]
+    public function reject(CommentRequest $request)
+    {
+        $params =  $request->all();
+        $cur_user_id = $this->request->getAttribute('user_id');
+        $this->service->reject($params['comment_id'], $cur_user_id, (string) $params['reject_reason'] ??'');
         return returnSuccess();
     }
 }

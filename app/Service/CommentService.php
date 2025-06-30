@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use App\Constants\AuditStatus;
+use App\Constants\AuditType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
@@ -11,6 +13,9 @@ class CommentService
 {
     #[Inject]
     protected FileService $fileService;
+
+    #[Inject]
+    protected AuditService $auditService;
 
     public function getList(array $params): array
     {
@@ -27,6 +32,9 @@ class CommentService
         }
         if (!empty($params['post_id'])) {
             $query->where('comment.post_id', '=', $params['post_id']);
+        }
+        if(!empty($params['source'])){
+            $query->where('comment.source', '=', $params['source']);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -70,5 +78,51 @@ class CommentService
             'is_top' => $is_top,
             'update_time' => date('Y-m-d H:i:s')
         ]);
+    }
+
+    public function pass(int $comment_id, int $cur_user_id): bool
+    {
+        $comment = Db::table('comment')
+            ->where('id', '=', $comment_id)
+            ->first(['id', 'source', 'audit_status']);
+        if ($comment->audit_status != AuditStatus::PENDING->value) {
+            throw new LogicException('帖子已经审核过了');
+        }
+        Db::beginTransaction();
+        try {
+            Db::table('comment')->where('id', '=', $comment_id)->update([
+                'audit_status' => AuditStatus::PUBLISHED->value,
+                'update_time' => date('Y-m-d H:i:s'),
+            ]);
+            $this->auditService->pass(AuditType::COMMENT->value,$comment_id,$cur_user_id);
+            Db::commit();
+        }catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+        return true;
+    }
+
+    public function reject(int $comment_id, int $cur_user_id, string $reject_reason)
+    {
+        $comment = Db::table('comment')
+            ->where('id', '=', $comment_id)
+            ->first(['id', 'audit_status']);
+        if ($comment->audit_status != AuditStatus::PENDING->value) {
+            throw new LogicException('该角色已经审核过了');
+        }
+        Db::beginTransaction();
+        try {
+            Db::table('comment')->where('id', '=', $comment_id)->update([
+                'audit_status' => AuditStatus::REJECTED->value,
+                'audit_result' => $reject_reason,
+            ]);
+            $this->auditService->reject(AuditType::COMMENT->value,$comment_id,$cur_user_id,$reject_reason);
+            Db::commit();
+        }catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+        return true;
     }
 }
