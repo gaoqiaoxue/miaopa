@@ -14,12 +14,11 @@ enum AuditStatus: int
 {
     use EnumConstantsTrait;
 
-    // 0待审核 1已发布 2已拒绝
     #[Message('待审核')]
     case PENDING = 0;
 
-    #[Message('已发布')]
-    case PUBLISHED = 1;
+    #[Message('已通过')]
+    case PASSED = 1;
 
     #[Message('已拒绝')]
     case REJECTED = 2;
@@ -28,7 +27,7 @@ enum AuditStatus: int
     {
         return [
             self::PENDING->value => self::PENDING->getMessage(),
-            self::PUBLISHED->value => self::PUBLISHED->getMessage(),
+            self::PASSED->value => self::PASSED->getMessage(),
             self::REJECTED->value => self::REJECTED->getMessage(),
         ];
     }
@@ -37,7 +36,7 @@ enum AuditStatus: int
     {
         return [
             self::PENDING->value,
-            self::PUBLISHED->value,
+            self::PASSED->value,
             self::REJECTED->value,
         ];
     }

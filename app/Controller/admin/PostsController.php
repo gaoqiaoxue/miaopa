@@ -22,7 +22,7 @@ class PostsController extends AbstractController
     public function getList(): array
     {
         $params = $this->request->all();
-        $params['audit_status'] = AuditStatus::PUBLISHED->value;
+        $params['audit_status'] = AuditStatus::PASSED->value;
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }

@@ -101,7 +101,7 @@ class PostsService
         Db::beginTransaction();
         try {
             Db::table('post')->where('id', '=', $post_id)->update([
-                'audit_status' => AuditStatus::PUBLISHED->value,
+                'audit_status' => AuditStatus::PASSED->value,
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
             $this->auditService->pass(AuditType::POST->value,$post_id,$cur_user_id);

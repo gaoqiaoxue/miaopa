@@ -91,7 +91,7 @@ class CommentService
         Db::beginTransaction();
         try {
             Db::table('comment')->where('id', '=', $comment_id)->update([
-                'audit_status' => AuditStatus::PUBLISHED->value,
+                'audit_status' => AuditStatus::PASSED->value,
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
             $this->auditService->pass(AuditType::COMMENT->value,$comment_id,$cur_user_id);

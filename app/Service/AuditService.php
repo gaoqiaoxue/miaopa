@@ -27,7 +27,7 @@ class AuditService
             ->where('content_id', $content_id)
             ->where('status', AuditStatus::PENDING->value)
             ->update([
-                'status' => AuditStatus::PUBLISHED->value,
+                'status' => AuditStatus::PASSED->value,
                 'result' => $result,
                 'handler_id' => $handler_id,
                 'handle_time' => date('Y-m-d H:i:s'),

@@ -140,7 +140,7 @@ class RoleService
             $data['create_by'] = $create_by;
             $data['source'] = $source;
             if ($source == 'admin') {
-                $data['audit_status'] = AuditStatus::PUBLISHED;
+                $data['audit_status'] = AuditStatus::PASSED;
             } else {
                 $data['audit_status'] = AuditStatus::PENDING;
             }
@@ -164,7 +164,7 @@ class RoleService
         Db::beginTransaction();
         try {
             Db::table('role')->where('id', '=', $role_id)->update([
-                'audit_status' => AuditStatus::PUBLISHED->value,
+                'audit_status' => AuditStatus::PASSED->value,
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
             $this->auditService->pass(AuditType::ROLE->value,$role_id,$cur_user_id);
