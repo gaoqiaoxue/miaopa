@@ -13,6 +13,9 @@ class UserService
     #[Inject]
     protected AuthTokenInterface $authToken;
 
+    #[Inject]
+    protected FileService $fileService;
+
     public function login(array $data): array
     {
         $user = Db::table('user')->where(['username' => $data['username']])->first();
@@ -27,7 +30,7 @@ class UserService
             'username' => $user->username,
             'nickname' => $user->nickname,
             'avatar' => $user->avatar,
-            'avatar_url' => getAvatar($user->avatar),
+            'avatar_url' => $this->fileService->getAvatar($user->avatar),
         ];
         $token = $this->authToken->createToken($user_data);
         Db::table('user')->where(['id' => $user->id])->update(['token' => $token]);
@@ -84,7 +87,7 @@ class UserService
         if (!$user) {
             throw new LogicException('用户不存在');
         }
-        $user->avatar_url = getAvatar($user->avatar);
+        $user->avatar_url = $this->fileService->getAvatar($user->avatar);
         $user->created_days = $this->getCreatedDays($user->create_time);
         // TODO 获取声望值
         return $user;

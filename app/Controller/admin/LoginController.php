@@ -78,7 +78,6 @@ class LoginController extends AbstractController
     {
         $user_id = $this->request->getAttribute("user_id");
         $user = $this->service->getInfo($user_id);
-        $user->avatar_url = getAvatar($user->avatar);
         return returnSuccess($user);
     }
 

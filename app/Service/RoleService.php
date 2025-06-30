@@ -5,9 +5,12 @@ namespace App\Service;
 use App\Constants\RoleType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
+use Hyperf\Di\Annotation\Inject;
 
 class RoleService
 {
+    #[Inject]
+    protected FileService $fileService;
 
     public function getList(array $params): array
     {
@@ -33,7 +36,7 @@ class RoleService
         $data = paginateTransformer($list);
         if (!empty($data['items'])) {
             $covers = array_column($data['items'], 'cover');
-            $covers = FileService::getFilepathByIds($covers);
+            $covers = $this->fileService->getFilepathByIds($covers);
             $circle_ids = array_column($data['items'], 'circle_id');
             $cirlces = Db::table('circle')
                 ->whereIn('id', $circle_ids)
@@ -59,9 +62,9 @@ class RoleService
         if (!$info) {
             throw new LogicException('角色不存在');
         }
-        $info->cover_url = FileService::getFilePathById($info->cover);
+        $info->cover_url = $this->fileService->getFilePathById($info->cover);
         $images = explode(',', $info->images);
-        $info->images = FileService::getFileInfoByIds($images);
+        $info->images = $this->fileService->getFileInfoByIds($images);
         $info->circle_name = Db::table('circle')
             ->where('id', '=', $info->circle_id)
             ->value('name');

@@ -4,9 +4,12 @@ namespace App\Service;
 
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
+use Hyperf\Di\Annotation\Inject;
 
 class VirtualService
 {
+    #[Inject]
+    protected FileService $fileService;
     public function getList(array $params): array
     {
         $query = Db::table('virtual_item')->where('del_flag', 0);
@@ -24,7 +27,7 @@ class VirtualService
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
             $images = array_column($data['items'], 'image');
-            $images = FileService::getFilepathByIds($images);
+            $images = $this->fileService->getFilepathByIds($images);
             foreach ($data['items'] as $item) {
                 $item->image_url = $images[$item->image] ?? '';
             }
@@ -41,11 +44,11 @@ class VirtualService
         if (!$virtual) {
             throw new LogicException('虚拟商品不存在');
         }
-        $virtual->image_url = FileService::getFilePathById($virtual->image);
+        $virtual->image_url = $this->fileService->getFilePathById($virtual->image);
         if (empty($virtual->avatar)) {
             $virtual->avatar_url = '';
         } else {
-            $virtual->avatar_url = FileService::getFilePathById($virtual->avatar);
+            $virtual->avatar_url = $this->fileService->getFilePathById($virtual->avatar);
         }
         return $virtual;
     }

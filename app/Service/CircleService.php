@@ -6,9 +6,13 @@ use App\Constants\AbleStatus;
 use App\Constants\CircleRelationType;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
+use Hyperf\Di\Annotation\Inject;
 
 class CircleService
 {
+    #[Inject]
+    protected FileService $fileService;
+
     public function getList($params = [])
     {
         $query = Db::table('circle');
@@ -21,8 +25,8 @@ class CircleService
         if (isset($params['status']) && in_array($params["status"], AbleStatus::cases())) {
             $query->where('status', '=', $params['status']);
         }
-        if (!empty($params['create_time_start']) && !empty($params['create_time_end'])) {
-            $query->whereBetween('create_time', [$params['create_time_start'], $params['create_time_end']]);
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
+            $query->whereBetween('create_time', [$params['start_time'], $params['end_time']]);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -32,7 +36,7 @@ class CircleService
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
             $covers = array_column($data['items'], 'cover');
-            $covers = FileService::getFilepathByIds($covers);
+            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($data['items'] as $item) {
                 $item->cover_url = $covers[$item->cover] ?? '';
             }
@@ -51,8 +55,8 @@ class CircleService
         if (!$circle) {
             throw new ParametersException('圈子不存在');
         }
-        $circle->bg_url = FileService::getFilePathById($circle->bg);
-        $circle->cover_url = FileService::getFilePathById($circle->cover);
+        $circle->bg_url = $this->fileService->getFilePathById($circle->bg);
+        $circle->cover_url = $this->fileService->getFilePathById($circle->cover);
         $circle->relations = $this->getRelations($circle->relation_type, json_decode($circle->relation_ids, true));
         // TODO 圈子动态贴，问答帖统计
 

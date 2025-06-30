@@ -59,21 +59,20 @@ if (!function_exists('getClientIp')) {
         $request = \Hyperf\Context\Context::get(\Psr\Http\Message\ServerRequestInterface::class);
         // 处理代理情况
         $res = $request->getHeaders();
-        var_dump($res);
         if (isset($res['http_client_ip'])) {
-            return $res['http_client_ip'];
+            return is_array($res['http_client_ip']) ? $res['http_client_ip'][0] : $res['http_client_ip'];
         } elseif (isset($res['x-real-ip'])) {
-            return $res['x-real-ip'];
+            return is_array($res['x-real-ip']) ? $res['x-real-ip'][0] : $res['x-real-ip'];
         } elseif (isset($res['x-forwarded-for'])) {
-            return $res['x-forwarded-for'];
+            return is_array($res['x-forwarded-for']) ? $res['x-forwarded-for'][0] : $res['x-forwarded-for'];
         } elseif (isset($res['http_x_forwarded_for'])) {
             //部分CDN会获取多层代理IP，所以转成数组取第一个值
-            $arr = explode(',', $res['http_x_forwarded_for']);
+            $http_x_forwarded_for = is_array($res['http_x_forwarded_for']) ? $res['http_x_forwarded_for'][0] : $res['http_x_forwarded_for'];
+            $arr = explode(',', $http_x_forwarded_for[0]);
             return $arr[0];
         } else {
             // return $res['remote_addr'];
             $serverParams = $request->getServerParams();
-            var_dump($serverParams);
             return $serverParams['remote_addr'] ?? '';
         }
     }
@@ -111,19 +110,6 @@ if (!function_exists('arrayToTree')) {
             }
         }
         return $branch;
-    }
-}
-
-if (!function_exists('getAvatar')) {
-    function getAvatar($avatar)
-    {
-        if (empty($avatar)) {
-            return \Hyperf\Support\env('FILE_HOST') . '/uploads/default_avatar.png';
-        } elseif (is_numeric($avatar)) {
-            return \App\Service\FileService::getFilePathById($avatar);
-        } else {
-            return generateFileUrl($avatar);
-        }
     }
 }
 

@@ -7,9 +7,13 @@ use App\Constants\ActiveStatus;
 use App\Constants\ActivityUserStatus;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
+use Hyperf\Di\Annotation\Inject;
 
 class ActivityService
 {
+    #[Inject]
+    protected FileService $fileService;
+
     public function __construct()
     {
         // TODO 根据活动时间更新活动状态
@@ -43,7 +47,7 @@ class ActivityService
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
             $covers = array_column($data['items'], 'cover');
-            $covers = FileService::getFilepathByIds($covers);
+            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($data['items'] as $item) {
                 $item->cover_url = $covers[$item->cover] ?? '';
             }
@@ -61,8 +65,8 @@ class ActivityService
         if (empty($info)) {
             throw new ParametersException('活动不存在');
         }
-        $info->bg_url = FileService::getFilePathById($info->bg);
-        $info->cover_url = FileService::getFilePathById($info->cover);
+        $info->bg_url = $this->fileService->getFilePathById($info->bg);
+        $info->cover_url = $this->fileService->getFilePathById($info->cover);
         $info->tags = json_decode($info->tags, true);
         $info->creater_name = Db::table('sys_user')
             ->where('user_id', '=', $info->create_by)

@@ -13,6 +13,9 @@ class SysUserService
     #[Inject]
     protected AuthTokenInterface $authToken;
 
+    #[Inject]
+    protected FileService $fileService;
+
     public function login(array $data): array
     {
         $user = Db::table('sys_user')->where(['user_name' => $data['user_name']])->first();
@@ -23,9 +26,9 @@ class SysUserService
         if ($user->status != AbleStatus::ENABLE->value)
             throw new LogicException('账号已被禁用');
         $role = Db::table('sys_user_role')
-            ->leftJoin('sys_role', 'sys_user_role.role_id = sys_role.role_id')
+            ->leftJoin('sys_role', 'sys_user_role.role_id', '=', 'sys_role.role_id')
             ->where(['user_id' => $user->user_id])
-            ->select(['sys_role.role_id', 'sys_role.role_name', 'sys_role.role_status'])
+            ->select(['sys_role.role_id', 'sys_role.role_name', 'sys_role.status'])
             ->first();
         if ($role->status != AbleStatus::ENABLE->value)
             throw new LogicException('角色已被禁用');
@@ -34,7 +37,7 @@ class SysUserService
             'user_name' => $user->user_name,
             'nick_name' => $user->nick_name,
             'avatar' => $user->avatar,
-            'avatar_url' => getAvatar($user->avatar),
+            'avatar_url' => $this->fileService->getAvatar($user->avatar),
             'role_id' => $role->role_id,
             'role_name' => $role->role_name,
         ];
@@ -79,8 +82,8 @@ class SysUserService
         if (isset($params['status']) && in_array($params['status'], [0, 1])) {
             $query->where('sys_user.status', '=', $params['status']);
         }
-        if (!empty($params['create_time_start']) && !empty($params['create_time_end'])) {
-            $query->whereBetween('sys_user.create_time', [$params['create_time_start'], $params['create_time_end']]);
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
+            $query->whereBetween('sys_user.create_time', [$params['start_time'], $params['end_time']]);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -101,6 +104,7 @@ class SysUserService
         if (!$user) {
             throw new LogicException('用户不存在');
         }
+        $user->avatar_url = $this->fileService->getAvatar($user->avatar);
         return $user;
     }
 

@@ -103,37 +103,37 @@ class FileService
         return $safeName . '_' . uniqid() . '.' . $extension;
     }
 
-    static public function getFilePathById(int $upload_id):string
+    public function getFilePathById(int $upload_id): string
     {
         $path = \Hyperf\DbConnection\Db::table('sys_upload')
             ->where('upload_id', $upload_id)
             ->value('url');
-        if($path){
+        if ($path) {
             return generateFileUrl($path);
         }
         return '';
     }
 
-    static public function getFileInfoById(int $upload_id): object|null
+    public function getFileInfoById(int $upload_id): object|null
     {
         $file = \Hyperf\DbConnection\Db::table('sys_upload')
             ->where('upload_id', $upload_id)
-            ->select(['upload_id','file_name','new_file_name','url','thumb','ext','size','mime'])
+            ->select(['upload_id', 'file_name', 'new_file_name', 'url', 'thumb', 'ext', 'size', 'mime'])
             ->first();
-        if($file){
+        if ($file) {
             $file->url = generateFileUrl($file->url);
             !empty($file->thumb) && $file->thumb = generateFileUrl($file->thumb);
         }
         return null;
     }
 
-    public static function getFilepathByIds(array $upload_ids):array
+    public function getFilepathByIds(array $upload_ids): array
     {
         $files = \Hyperf\DbConnection\Db::table('sys_upload')
             ->whereIn('upload_id', $upload_ids)
-            ->pluck('url','upload_id')
+            ->pluck('url', 'upload_id')
             ->toArray();
-        if($files){
+        if ($files) {
             foreach ($files as $key => $file) {
                 $files[$key] = generateFileUrl($file);
             }
@@ -142,14 +142,14 @@ class FileService
         return [];
     }
 
-    public static function getFileInfoByIds(array $upload_ids):array
+    public function getFileInfoByIds(array $upload_ids): array
     {
         $files = \Hyperf\DbConnection\Db::table('sys_upload')
             ->whereIn('upload_id', $upload_ids)
-            ->select(['upload_id','file_name','new_file_name','url','thumb','ext','size','mime'])
+            ->select(['upload_id', 'file_name', 'new_file_name', 'url', 'thumb', 'ext', 'size', 'mime'])
             ->get()
             ->toArray();
-        if($files){
+        if ($files) {
             $result = [];
             foreach ($files as $file) {
                 $file->url = generateFileUrl($file->url);
@@ -159,5 +159,16 @@ class FileService
             return $result;
         }
         return [];
+    }
+
+    public function getAvatar(mixed $avatar): string
+    {
+        if (empty($avatar)) {
+            return \Hyperf\Support\env('FILE_HOST') . '/uploads/default_avatar.png';
+        } elseif (is_numeric($avatar)) {
+            return $this->getFilePathById($avatar);
+        } else {
+            return generateFileUrl($avatar);
+        }
     }
 }

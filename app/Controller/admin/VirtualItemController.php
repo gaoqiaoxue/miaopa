@@ -53,8 +53,8 @@ class VirtualItemController extends AbstractController
     #[Scene('id')]
     public function delete(VirtualRequest $request): array
     {
-        $activity_id = $request->input('virtual_id', 0);
-        $this->service->delete($activity_id);
+        $virtual_id = $request->input('virtual_id', 0);
+        $this->service->delete($virtual_id);
         return returnSuccess();
     }
 

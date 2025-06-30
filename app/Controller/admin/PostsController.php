@@ -4,8 +4,8 @@ namespace App\Controller\admin;
 
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
-use App\Request\VirtualRequest;
-use App\Service\VirtualService;
+use App\Request\PostsRequest;
+use App\Service\PostsService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
@@ -16,7 +16,7 @@ use Hyperf\Validation\Annotation\Scene;
 class PostsController extends AbstractController
 {
     #[Inject]
-    protected VirtualService $service;
+    protected PostsService $service;
 
     public function getList(): array
     {
@@ -26,35 +26,18 @@ class PostsController extends AbstractController
     }
 
     #[Scene('id')]
-    public function getInfo(VirtualRequest $request): array
+    public function getInfo(PostsRequest $request): array
     {
-        $virtual_id = $request->input('virtual_id', 0);
-        $virtual = $this->service->getInfo($virtual_id);
-        return returnSuccess($virtual);
-    }
-
-    #[Scene('add')]
-    public function add(VirtualRequest $request): array
-    {
-        $data = $request->validated();
-        $data['create_by'] = $this->request->getAttribute("user_id");
-        $result = $this->service->add($data);
-        return returnSuccess(['id' => $result]);
-    }
-
-    #[Scene('edit')]
-    public function edit(VirtualRequest $request): array
-    {
-        $data = $request->validated();
-        $this->service->edit($data);
-        return returnSuccess();
+        $post_id = $request->input('post_id', 0);
+        $post = $this->service->getInfo($post_id);
+        return returnSuccess($post);
     }
 
     #[Scene('id')]
-    public function delete(VirtualRequest $request): array
+    public function delete(PostsRequest $request): array
     {
-        $activity_id = $request->input('virtual_id', 0);
-        $this->service->delete($activity_id);
+        $post_id = $request->input('post_id', 0);
+        $this->service->delete($post_id);
         return returnSuccess();
     }
 
