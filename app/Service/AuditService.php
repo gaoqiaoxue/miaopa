@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Constants\AuditStatus;
+use App\Constants\AuditType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
 
@@ -56,5 +57,20 @@ class AuditService
             throw  new LogicException('审核记录更新失败');
         }
         return true;
+    }
+
+    public function getAdminAuditMessage()
+    {
+        $list = Db::table('audit_record')
+            ->where('status', '=', AuditStatus::PENDING->value)
+            ->orderBy('create_time', 'asc')
+            ->select(['id','audit_type','content_id','user_id','create_time'])
+            ->get()
+            ->toArray();
+        foreach ($list as &$item) {
+            $type = AuditType::from($item->audit_type)->getMessage();
+            $item->message = '您有一条'.$type.'消息,请及时处理';
+        }
+        return $list;
     }
 }
