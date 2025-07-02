@@ -10,6 +10,7 @@ class
 ReportRequest extends FormRequest
 {
     protected array $scenes = [
+        'id' => ['report_id'],
         'reject' => ['report_id','reject_reason'],
         'pass' => ['report_id', 'mute_time']
     ];

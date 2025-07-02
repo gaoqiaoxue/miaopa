@@ -21,13 +21,20 @@ class ReportController extends AbstractController
     #[Inject]
     protected ReportService $service;
 
-    public function getAuditList(ReportRequest $request): array
+    public function getAuditList(): array
     {
         $params = $this->request->all();
         $list = $this->service->getAuditList($params);
         return returnSuccess($list);
     }
 
+    #[Scene('id')]
+    public function getInfo(ReportRequest $request)
+    {
+        $report_id = $this->request->input('report_id');
+        $info = $this->service->getInfo($report_id);
+        return returnSuccess($info);
+    }
 
     #[Scene('pass')]
     public function pass(ReportRequest $request): array

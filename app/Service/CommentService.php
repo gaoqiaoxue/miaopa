@@ -85,6 +85,9 @@ class CommentService
         $comment = Db::table('comment')
             ->where('id', '=', $comment_id)
             ->first(['id', 'source', 'audit_status']);
+        if(empty($comment)){
+            throw new LogicException('帖子不存在');
+        }
         if ($comment->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('帖子已经审核过了');
         }
@@ -108,6 +111,9 @@ class CommentService
         $comment = Db::table('comment')
             ->where('id', '=', $comment_id)
             ->first(['id', 'audit_status']);
+        if(empty($comment)){
+            throw new LogicException('帖子不存在');
+        }
         if ($comment->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('该角色已经审核过了');
         }

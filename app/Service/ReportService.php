@@ -60,8 +60,8 @@ class ReportService
     public function getInfo(int $report_id): object
     {
         $info = Db::table('report')
-            ->where('id',' =', $report_id)
-            ->select(['id','user_id','content_id','content_user_id','report_type','report_reason','description','images', 'audit_status','audit_result','create_time'])
+            ->where('id', '=', $report_id)
+            ->select(['id', 'user_id', 'content_id', 'content_user_id', 'report_type', 'report_reason', 'description', 'images', 'audit_status', 'audit_result', 'create_time'])
             ->first();
         if (!$info) {
             throw new LogicException('举报信息不存在');
@@ -77,9 +77,9 @@ class ReportService
 
 
         $content = null;
-        if($info->report_type == ReportType::POST->value){
+        if ($info->report_type == ReportType::POST->value) {
             $content = $this->postsService->getInfo($info->content_id);
-        }elseif($info->report_type == ReportType::COMMENT->value){
+        } elseif ($info->report_type == ReportType::COMMENT->value) {
             $content = $this->commentService->getInfo($info->content_id);
             $content->post = $this->postsService->getInfo($info->post_id);
         }

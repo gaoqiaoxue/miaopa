@@ -90,6 +90,7 @@ class UserService
         $user->avatar_url = $this->fileService->getAvatar($user->avatar);
         $user->created_days = $this->getCreatedDays($user->create_time);
         // TODO 获取声望值
+        $user->prestige = 0;
         return $user;
     }
 

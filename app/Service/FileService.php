@@ -137,7 +137,7 @@ class FileService
             foreach ($files as $key => $file) {
                 $files[$key] = generateFileUrl($file);
             }
-            return $files;
+            return array_values($files);
         }
         return [];
     }
@@ -154,7 +154,7 @@ class FileService
             foreach ($files as $file) {
                 $file->url = generateFileUrl($file->url);
                 !empty($file->thumb) && $file->thumb = generateFileUrl($file->thumb);
-                $result[$file->upload_id] = $file;
+                $result[] = $file;
             }
             return $result;
         }

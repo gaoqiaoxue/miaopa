@@ -40,7 +40,7 @@ class PostsService
             $query->where('user.nickname', 'like', '%' . $params['nickname'] . '%');
         }
         if (isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
-            $query->where('post.status', '=', $params['status']);
+            $query->where('post.audit_status', '=', $params['audit_status']);
         }
         if(!empty($params['source'])){
             $query->where('post.source', '=', $params['source']);
