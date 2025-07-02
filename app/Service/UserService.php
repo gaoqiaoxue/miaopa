@@ -33,7 +33,9 @@ class UserService
             'avatar_url' => $this->fileService->getAvatar($user->avatar),
         ];
         $token = $this->authToken->createToken($user_data);
-        Db::table('user')->where(['id' => $user->id])->update(['token' => $token]);
+        Db::table('user')->where(['id' => $user->id])->update([
+            'last_login_time' => date('Y-m-d H:i:s'),
+        ]);
         return [
             'user' => $user,
             'token' => $token,
