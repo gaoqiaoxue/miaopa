@@ -69,7 +69,7 @@ class UserLoginService
     protected function returnLoginData(object $user): array
     {
         $user_data = [
-            'uid' => $user->id,
+            'user_id' => $user->id,
             'username' => $user->username,
             'nickname' => $user->nickname,
             'avatar' => $user->avatar,

@@ -75,7 +75,7 @@ class PostsService
         }
         if (!empty($post->media)) {
             $media = explode(',', $post->media);
-            $post->media_urls = $this->fileService->getFileInfoByIds($media);
+            $post->media_urls = array_values($this->fileService->getFileInfoByIds($media));
         } else {
             $post->media_urls = [];
         }

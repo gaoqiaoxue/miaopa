@@ -73,7 +73,7 @@ class ReportService
             $images = explode(',', $info->images);
             $images = $this->fileService->getFileInfoByIds($images);
         }
-        $info->images = $images;
+        $info->images = array_values($images);
 
 
         $content = null;

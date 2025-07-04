@@ -16,6 +16,8 @@ class CircleRequest extends FormRequest
         'add' => ['bg', 'cover', 'name', 'circle_type', 'is_hot', 'weight', 'status', 'relation_type', 'relation_ids', 'description'],
         'edit' => ['circle_id', 'bg', 'cover', 'name', 'circle_type', 'is_hot', 'weight', 'status', 'relation_type', 'relation_ids', 'description'],
         'change_status' => ['circle_id', 'status'],
+        'circle_id' =>  ['circle_id'],
+        'follow' => ['circle_id', 'status']
     ];
 
     /**

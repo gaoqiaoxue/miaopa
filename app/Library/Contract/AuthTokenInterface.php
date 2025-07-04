@@ -26,6 +26,6 @@ interface AuthTokenInterface
     /**
      * @return array
      */
-    public function getUserData(string $scene = 'default'): array;
+    public function getUserData(string $scene = 'default', bool $force = true): array;
 
 }

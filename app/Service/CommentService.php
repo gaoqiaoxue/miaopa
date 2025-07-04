@@ -57,7 +57,7 @@ class CommentService
         }
         if(!empty($comment->images)){
             $images = explode(',', $comment->images);
-            $comment->image_urls = $this->fileService->getFilepathByIds($images);
+            $comment->image_urls = array_values($this->fileService->getFilepathByIds($images));
         }else{
             $comment->image_urls = [];
         }

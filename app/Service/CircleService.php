@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Constants\AbleStatus;
 use App\Constants\CircleRelationType;
+use App\Constants\CircleType;
 use App\Constants\PostType;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
@@ -89,13 +90,13 @@ class CircleService
         if ($relation_type == CircleRelationType::CIRCLE) {
             return Db::table('circle')
                 ->whereIn('id', $relation_ids)
-                ->select(['id', 'name'])
+                ->select(['id', 'name', 'cover'])
                 ->get()
                 ->toArray();
         } elseif ($relation_type == CircleRelationType::ROLE) {
             return Db::table('role')
                 ->whereIn('id', $relation_ids)
-                ->select(['id', 'name'])
+                ->select(['id', 'name', 'cover'])
                 ->get()
                 ->toArray();
         } else {
@@ -172,4 +173,153 @@ class CircleService
         return $data;
     }
 
+    public function getRecommendList(int $user_id = 0): array
+    {
+        $total_num = 8;
+        $circles = [];
+        if (!empty($user_id)) {
+            $circles = Db::table('circle_follow')
+                ->leftJoin('circle', 'circle.id', '=', 'circle_follow.circle_id')
+                ->where('circle_follow.user_id', '=', $user_id)
+                ->where('circle.status', '=', AbleStatus::ENABLE)
+                ->select(['circle.id', 'circle.name', 'circle.cover'])
+                ->orderBy('circle.is_hot', 'desc')
+                ->orderBy('circle.weight', 'desc')
+                ->orderBy('circle.id', 'desc')
+                ->limit($total_num)
+                ->get()
+                ->toArray();
+        }
+        $num = count($circles);
+        if ($num < $total_num) {
+            $recom_circles = Db::table('circle')
+                ->where('status', '=', AbleStatus::ENABLE)
+                ->select(['id', 'name', 'cover'])
+                ->orderBy('is_hot', 'desc')
+                ->orderBy('weight', 'desc')
+                ->orderBy('id', 'desc')
+                ->limit($total_num - $num)
+                ->get()
+                ->toArray();
+            $circles = array_merge($circles, $recom_circles);
+        }
+        if (!empty($circles)) {
+            $covers = array_column($circles, 'cover');
+            $covers = $this->fileService->getFilepathByIds($covers);
+            foreach ($circles as $circle) {
+                $circle->cover_url = $covers[$circle->cover] ?? '';
+            }
+        }
+        return $circles;
+    }
+
+    public function getRelationsById(int $circle_id): array
+    {
+        $circle = Db::table('circle')
+            ->where(['id' => $circle_id])
+            ->select(['id', 'name', 'relation_type', 'relation_ids'])
+            ->first();
+        if (empty($circle)) {
+            throw new ParametersException('圈子不存在');
+        }
+        $relations = $this->getRelations($circle->relation_type, json_decode($circle->relation_ids, true));
+        if (!empty($relations)) {
+            $covers = array_column($relations, 'cover');
+            $covers = $this->fileService->getFilepathByIds($covers);
+            foreach ($relations as $relation) {
+                $relation->cover_url = $covers[$relation->cover] ?? '';
+            }
+        }
+        return $relations;
+    }
+
+    public function getAllByType(int $user_id = 0, string $keyword = '')
+    {
+        $query = Db::table('circle')
+            ->where('status', '=', AbleStatus::ENABLE)
+            ->orderBy('is_hot', 'desc')
+            ->orderBy('weight', 'desc')
+            ->orderBy('id', 'desc')
+            ->select(['id', 'name', 'cover', 'circle_type', 'is_hot']);
+        if (!empty($keyword)) {
+            $query->where('name', 'like', '%' . $keyword . '%');
+        }
+        $all = $query->get()->toArray();
+        $follow_ids = [];
+        if (!empty($user_id)) {
+            $follow_ids = Db::table('circle_follow')
+                ->where('user_id', '=', $user_id)
+                ->pluck('circle_id')
+                ->toArray();
+        }
+        $result = [
+            'follow' => [],
+            'hot' => [],
+            CircleType::CIRCLE->name => [],
+            CircleType::CARTOON->name => [],
+            CircleType::GAME->name => []
+        ];
+        $covers = array_column($all, 'cover');
+        $covers = $this->fileService->getFilepathByIds($covers);
+        foreach ($all as $circle) {
+            $circle->cover_url = $covers[$circle->cover] ?? '';
+            if (in_array($circle->id, $follow_ids)) {
+                $result['follow'][] = $circle;
+            } elseif ($circle->is_hot) {
+                $result['hot'][] = $circle;
+            } else {
+                $type_name = CircleType::tryFrom($circle->circle_type)->name ?? '';
+                $result[$type_name][] = $circle;
+            }
+        }
+        return $result;
+    }
+
+    public function detail(int $circle_id, int $user_id = 0): object
+    {
+        if (empty($circle_id))
+            throw new ParametersException('请传入圈子ID');
+        $circle = Db::table('circle')
+            ->where(['id' => $circle_id])
+            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time'])
+            ->first();
+        if (!$circle) {
+            throw new ParametersException('圈子不存在');
+        }
+        $circle->bg_url = $this->fileService->getFilePathById($circle->bg);
+        $circle->cover_url = $this->fileService->getFilePathById($circle->cover);
+        $circle->follow_num = Db::table('circle_follow')
+            ->where('circle_id', '=', $circle_id)
+            ->count();
+        $is_follow = 0;
+        if (!empty($user_id)) {
+            $is_follow = Db::table('circle_follow')
+                ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
+                ->count();
+        }
+        $circle->is_follow = $is_follow ? 1 : 0;
+        return $circle;
+    }
+
+    public function follow(int $user_id, int $circle_id, int $status): bool
+    {
+        $has = Db::table('circle_follow')
+            ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
+            ->count();
+        if ((empty($has) && $status == 0) || (!empty($has) && $status == 1)) {
+            return true;
+        }
+        if ($status == 1) {
+            Db::table('circle_follow')->insert([
+                'circle_id' => $circle_id,
+                'user_id' => $user_id,
+                'create_time' => date('Y-m-d H:i:s'),
+            ]);
+        } else {
+            Db::table('circle_follow')
+                ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
+                ->delete();
+        }
+        return true;
+    }
 }

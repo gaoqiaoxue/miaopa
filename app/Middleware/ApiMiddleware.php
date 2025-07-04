@@ -31,11 +31,15 @@ class ApiMiddleware implements MiddlewareInterface
         if (!$payload){
             throw new NoAuthException();
         }
-
+        $user_data = $payload['jwt_claims'];
         // Context override request though proxy ServerRequestInterface class
-        $request = Context::override(ServerRequestInterface::class,
-            fn(ServerRequestInterface $request) => $request->withAttribute('user_data', $payload)
-        );
+//        $request = Context::override(ServerRequestInterface::class,
+//            fn(ServerRequestInterface $request) => $request->withAttribute('user_data', $payload)
+//        );
+        $request = Context::override(ServerRequestInterface::class, function (ServerRequestInterface $request) use ($user_data) {
+            return $request->withAttribute('user_id', $user_data['user_id'])
+                ->withAttribute('user_data', $user_data);
+        });
 
         return $handler->handle($request);
     }

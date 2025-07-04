@@ -61,7 +61,7 @@ class JwtAuthTokenLib implements AuthTokenInterface
         }
     }
 
-    public function getUserData(string $scene = 'default'): array
+    public function getUserData(string $scene = 'default', bool $force = true): array
     {
         try {
             $token = JWTUtil::getToken($this->request);
@@ -72,8 +72,13 @@ class JwtAuthTokenLib implements AuthTokenInterface
                 ];
             }
         } catch (\Throwable $e) {
-            throw new NoAuthException($e->getMessage());
+            if($force){
+                throw new NoAuthException($e->getMessage());
+            }
         }
-        throw new NoAuthException('token 异常');
+        if ($force) {
+            throw new NoAuthException('token 异常');
+        }
+        return [];
     }
 }

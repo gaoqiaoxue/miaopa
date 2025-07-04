@@ -81,7 +81,7 @@ class RoleService
         }
         $info->cover_url = $this->fileService->getFilePathById($info->cover);
         $images = explode(',', $info->images);
-        $info->images = $this->fileService->getFileInfoByIds($images);
+        $info->images = array_values($this->fileService->getFileInfoByIds($images));
         $info->circle_name = Db::table('circle')
             ->where('id', '=', $info->circle_id)
             ->value('name');
