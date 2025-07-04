@@ -26,6 +26,7 @@ return [
             'driver' => LocalAdapterFactory::class,
 //            'root' => __DIR__ . '/../../runtime',
             'root' => __DIR__ . '/../../public',
+            'directory_visibility' => 'public'
         ],
         'ftp' => [
             'driver' => FtpAdapterFactory::class,

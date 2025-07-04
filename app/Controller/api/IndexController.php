@@ -17,7 +17,7 @@ class IndexController extends AbstractController
 //        $user_data = $this->request->getAttribute("user_data");
         return [
 //            'data' => $user_data,
-            'path' =>$wechatOfficialLib->getRedirectUrl()
+            'path' => phpinfo()
 //            'data' => Db::table('sys_user')->where(['user_id' => 1])->get()
         ];
     }

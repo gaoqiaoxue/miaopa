@@ -9,7 +9,9 @@ use Hyperf\Validation\Request\FormRequest;
 class UserRequest extends FormRequest
 {
     protected array $scenes = [
-        'login' => ['username', 'password']
+        'login' => ['username', 'password'],
+        'wechat_auth' => ['code'],
+        'wechat_bind' => ['code', 'core_id']
     ];
 
     /**
@@ -28,6 +30,8 @@ class UserRequest extends FormRequest
         return [
             'username' => 'required',
             'password' => 'required|alpha_dash:ascii|between:6,20',
+            'code' => 'required',
+            'core_id' => 'required|integer',
         ];
     }
 

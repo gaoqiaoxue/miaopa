@@ -10,50 +10,9 @@ use Hyperf\Di\Annotation\Inject;
 
 class UserService
 {
-    #[Inject]
-    protected AuthTokenInterface $authToken;
 
     #[Inject]
     protected FileService $fileService;
-
-    public function login(array $data): array
-    {
-        $user = Db::table('user')->where(['username' => $data['username']])->first();
-        if (!$user) {
-            throw new LogicException('账号不存在');
-        }
-        if (!checkPassword($data['password'], $user->password)) {
-            throw new LogicException('账号或密码错误');
-        }
-        $user_data = [
-            'uid' => $user->id,
-            'username' => $user->username,
-            'nickname' => $user->nickname,
-            'avatar' => $user->avatar,
-            'avatar_url' => $this->fileService->getAvatar($user->avatar),
-        ];
-        $token = $this->authToken->createToken($user_data);
-        Db::table('user')->where(['id' => $user->id])->update([
-            'last_login_time' => date('Y-m-d H:i:s'),
-        ]);
-        return [
-            'user' => $user,
-            'token' => $token,
-        ];
-    }
-
-    public function refreshToken(): array
-    {
-        return $this->authToken->refreshToken();
-    }
-
-    public function logout(): bool
-    {
-        if (!$this->authToken->logout()) {
-            throw new LogicException('退出失败');
-        }
-        return true;
-    }
 
     public function getList(array $params): array
     {

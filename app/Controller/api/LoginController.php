@@ -4,7 +4,7 @@ namespace App\Controller\api;
 
 use App\Controller\AbstractController;
 use App\Request\UserRequest;
-use App\Service\UserService;
+use App\Service\UserLoginService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\Validation\Annotation\Scene;
@@ -13,7 +13,7 @@ use Hyperf\Validation\Annotation\Scene;
 class LoginController extends AbstractController
 {
     #[Inject]
-    protected UserService $userService;
+    protected UserLoginService $service;
 
     /**
      *  账号密码登录
@@ -24,7 +24,27 @@ class LoginController extends AbstractController
     public function login(UserRequest $request)
     {
         $data = $request->all();
-        $result = $this->userService->login($data);
+        $result = $this->service->login($data);
+        return returnSuccess($result);
+    }
+
+    #[Scene('wechat_auth')]
+    public function wechatMiniAuth(UserRequest $request)
+    {
+        $data = $request->all();
+        $result = $this->service->wechatMiniAuth($data['code']);
+        if(isset($result['token'])){
+            return returnSuccess($result);
+        }else{
+            return returnSuccess($result,'请绑定手机号', 100);
+        }
+    }
+
+    #[Scene('wechat_bind')]
+    public function wechatGetPhoneNumber(UserRequest $request)
+    {
+        $data = $request->all();
+        $result = $this->service->wechatMiniGetPhoneNumber($data['code'], $data['core_id']);
         return returnSuccess($result);
     }
 
@@ -34,7 +54,7 @@ class LoginController extends AbstractController
      */
     public function refreshToken()
     {
-        $new_token = $this->userService->refreshToken();
+        $new_token = $this->service->refreshToken();
         return returnSuccess($new_token);
     }
 
@@ -44,7 +64,7 @@ class LoginController extends AbstractController
      */
     public function logout()
     {
-        $this->userService->logout();
+        $this->service->logout();
         return returnSuccess();
     }
 }
