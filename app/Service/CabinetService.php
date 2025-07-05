@@ -60,6 +60,7 @@ class CabinetService
             'cover' => $params['cover'],
             'item_num' => 0,
             'cabinet_type' => $params['cabinet_type'],
+            'is_public' => $params['is_public'],
             'create_time' => date('Y-m-d H:i:s'),
             'update_time' => date('Y-m-d H:i:s'),
         ]);
@@ -77,6 +78,7 @@ class CabinetService
         return Db::table('cabinet')->where('id', $params['cabinet_id'])->update([
             'name' => $params['name'],
             'cover' => $params['cover'],
+            'is_public' => $params['is_public'],
             'cabinet_type' => $params['cabinet_type'],
             'update_time' => date('Y-m-d H:i:s'),
         ]);
@@ -101,7 +103,7 @@ class CabinetService
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
         if (!empty($list['items'])) {
-            $covers = array_column($data['items'], 'cover');
+            $covers = array_column($list['items'], 'cover');
             $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($list['items'] as $item) {
                 $item->cover = $covers[$item->cover] ?? '';

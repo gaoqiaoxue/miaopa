@@ -30,10 +30,10 @@ class CabinetController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function getList():array
+    public function getList(): array
     {
         $params = $this->request->all();
-        if(empty($params['user_id'])){
+        if (empty($params['user_id'])) {
             return returnError('缺少必要参数user_id');
         }
         $params['is_public'] = 1;
@@ -70,6 +70,7 @@ class CabinetController extends AbstractController
     }
 
     #[Scene('id')]
+    #[Middleware(ApiMiddleware::class)]
     public function delete(CabinetRequest $request): array
     {
         $cabinet_id = $request->input('cabinet_id', 0);
@@ -99,7 +100,7 @@ class CabinetController extends AbstractController
         return returnSuccess($detail);
     }
 
-    #[Scene('id')]
+    #[Scene('add')]
     #[Middleware(ApiMiddleware::class)]
     public function addItem(CabinetItemRequest $request): array
     {
@@ -125,5 +126,6 @@ class CabinetController extends AbstractController
         $this->service->deleteItem($item_id);
         return returnSuccess();
     }
+
 
 }
