@@ -23,8 +23,8 @@ enum ReportType: int
     public static function getMaps(): array
     {
         return [
-            self::POST->value => self::POST->name,
-            self::COMMENT->value => self::COMMENT->name,
+            self::POST->value => self::POST->getMessage(),
+            self::COMMENT->value => self::COMMENT->getMessage(),
         ];
     }
 

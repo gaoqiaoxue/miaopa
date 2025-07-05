@@ -69,7 +69,7 @@ class RoleService
         return $data;
     }
 
-    public function getInfo(int $role_id): object
+    public function getInfo(int $role_id, array $cate = ['cover', 'images', 'circle', 'create_by']): object
     {
         $info = Db::table('role')
             ->where(['id' => $role_id])
@@ -79,20 +79,41 @@ class RoleService
         if (!$info) {
             throw new LogicException('角色不存在');
         }
-        $info->cover_url = $this->fileService->getFilePathById($info->cover);
-        $images = explode(',', $info->images);
-        $info->images = array_values($this->fileService->getFileInfoByIds($images));
-        $info->circle_name = Db::table('circle')
-            ->where('id', '=', $info->circle_id)
-            ->value('name');
-        if ($info->source == 'admin') {
-            $info->creater_name = Db::table('sys_user')
-                ->where('user_id', '=', $info->create_by)
-                ->value('nick_name');
-        } else {
-            $info->creater_name = Db::table('user')
-                ->where('id', '=', $info->create_by)
-                ->value('nickname');
+        return $this->transformerObject($info, $cate);
+    }
+
+    protected function transformerObject(object $info, array $cate = [], array $extra = []): object
+    {
+        if (in_array('cover', $cate)) {
+            if (isset($extra['covers'])) {
+                $info->cover_url = $extra['covers'][$info->cover] ?? '';
+            } else {
+                $info->cover_url = $this->fileService->getFilePathById($info->cover);
+            }
+        }
+        if (in_array('images', $cate)) {
+            $images = explode(',', $info->images);
+            $info->images = array_values($this->fileService->getFileInfoByIds($images));
+        }
+        if (in_array('circle', $cate)) {
+            if(isset($extra['circles'])){
+                $info->circle_name = $extra['circles'][$info->circle_id] ?? '';
+            }else{
+                $info->circle_name = Db::table('circle')
+                    ->where('id', '=', $info->circle_id)
+                    ->value('name');
+            }
+        }
+        if (in_array('create_by', $cate)) {
+            if ($info->source == 'admin') {
+                $info->creater_name = Db::table('sys_user')
+                    ->where('user_id', '=', $info->create_by)
+                    ->value('nick_name');
+            } else {
+                $info->creater_name = Db::table('user')
+                    ->where('id', '=', $info->create_by)
+                    ->value('nickname');
+            }
         }
         return $info;
     }
@@ -167,9 +188,9 @@ class RoleService
                 'audit_status' => AuditStatus::PASSED->value,
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
-            $this->auditService->pass(AuditType::ROLE->value,$role_id,$cur_user_id);
+            $this->auditService->pass(AuditType::ROLE->value, $role_id, $cur_user_id);
             Db::commit();
-        }catch (\Throwable $ex) {
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
@@ -190,9 +211,9 @@ class RoleService
                 'audit_status' => AuditStatus::REJECTED->value,
                 'audit_result' => $reject_reason,
             ]);
-            $this->auditService->reject(AuditType::ROLE->value,$role_id,$cur_user_id,$reject_reason);
+            $this->auditService->reject(AuditType::ROLE->value, $role_id, $cur_user_id, $reject_reason);
             Db::commit();
-        }catch (\Throwable $ex) {
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }

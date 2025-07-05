@@ -105,6 +105,9 @@ class FileService
 
     public function getFilePathById(int $upload_id): string
     {
+        if(empty($upload_id)){
+            return '';
+        }
         $path = \Hyperf\DbConnection\Db::table('sys_upload')
             ->where('upload_id', $upload_id)
             ->value('url');
@@ -116,6 +119,9 @@ class FileService
 
     public function getFileInfoById(int $upload_id): object|null
     {
+        if(empty($upload_id)){
+            return null;
+        }
         $file = \Hyperf\DbConnection\Db::table('sys_upload')
             ->where('upload_id', $upload_id)
             ->select(['upload_id', 'file_name', 'new_file_name', 'url', 'thumb', 'ext', 'size', 'mime'])
@@ -129,6 +135,9 @@ class FileService
 
     public function getFilepathByIds(array $upload_ids): array
     {
+        if(empty($upload_ids)){
+            return [];
+        }
         $files = \Hyperf\DbConnection\Db::table('sys_upload')
             ->whereIn('upload_id', $upload_ids)
             ->pluck('url', 'upload_id')
@@ -144,6 +153,9 @@ class FileService
 
     public function getFileInfoByIds(array $upload_ids): array
     {
+        if(empty($upload_ids)){
+            return [];
+        }
         $files = \Hyperf\DbConnection\Db::table('sys_upload')
             ->whereIn('upload_id', $upload_ids)
             ->select(['upload_id', 'file_name', 'new_file_name', 'url', 'thumb', 'ext', 'size', 'mime'])
