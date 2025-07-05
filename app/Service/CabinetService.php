@@ -121,7 +121,8 @@ class CabinetService
         if (empty($info)) {
             throw new LogicException('物品不存在');
         }
-        $info->images = $this->fileService->getFileInfoByIds(explode(',', $info->images));
+        $images = $this->fileService->getFileInfoByIds(explode(',', $info->images));
+        $info->images = array_values($images);
         return $info;
     }
 
