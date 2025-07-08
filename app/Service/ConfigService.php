@@ -19,7 +19,7 @@ class ConfigService
             ->first();
         $info->continuous_sign_config = json_decode($info->continuous_sign_config, true);
         $info->stay_time_config = json_decode($info->stay_time_config, true);
-        return $info;
+        return (array) $info;
     }
 
     #[CacheEvict(prefix: 'system_config', value: "")]

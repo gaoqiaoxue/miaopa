@@ -6,6 +6,8 @@ namespace App\Controller\api;
 use App\Controller\AbstractController;
 use App\Library\WechatOfficialLib;
 use App\Middleware\ApiMiddleware;
+use App\Service\ConfigService;
+use Hyperf\DbConnection\Db;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
@@ -13,12 +15,12 @@ use Hyperf\HttpServer\Annotation\Middleware;
 #[Middleware(ApiMiddleware::class)]
 class IndexController extends AbstractController
 {
-    public function index(WechatOfficialLib $wechatOfficialLib){
+    public function index(ConfigService $service){
+
 //        $user_data = $this->request->getAttribute("user_data");
         return [
 //            'data' => $user_data,
-            'path' => phpinfo()
-//            'data' => Db::table('sys_user')->where(['user_id' => 1])->get()
+            'value' => $service->getValue('123')
         ];
     }
 

@@ -135,4 +135,37 @@ class PostsService
         }
         return true;
     }
+
+    public function publish(int $user_id, array $params, $source = 'user'):int
+    {
+        return Db::table('post')->insertGetId([
+            'user_id' => $user_id,
+            'circle_id' => $params['circle_id'],
+            'title' => $params['title'],
+            'content' => $params['content'],
+            'post_type' => $params['post_type'],
+            'media' => empty($params['media']) ? '' : implode(',',$params['media']),
+            'create_time' => date('Y-m-d H:i:s'),
+            'update_time' => date('Y-m-d H:i:s'),
+            'source' => $source,
+            'audit_status' => $source == 'user' ? AuditStatus::PENDING->value : AuditStatus::PASSED->value,
+        ]);
+    }
+
+    public function addViewRecord(int $user_id, int $post_id)
+    {
+        Db::beginTransaction();
+        try {
+            Db::table('post')->where('id', $post_id)->increment('view_count');
+            Db::table('post_view_record')->insert([
+                'user_id' => $user_id,
+                'post_id' => $post_id,
+                'create_time' => date('Y-m-d H:i:s'),
+            ]);
+            Db::commit();
+        } catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+    }
 }

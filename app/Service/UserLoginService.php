@@ -114,17 +114,25 @@ class UserLoginService
             }
             return $this->returnLoginData($user);
         } else {
-            $user = [
-                'name' => '',
-                'username' => $mobile,
-                'nickname' => '',
-                'mobile' => $mobile,
-                'avatar' => '',
-                'create_time' => date('Y-m-d H:i:s'),
-                'update_time' => date('Y-m-d H:i:s'),
-            ];
-            $user_id = Db::table('user')->insertGetId($user);
-            Db::table('user_core')->where('id', '=', $core_id)->update(['user_id' => $user_id]);
+            Db::beginTransaction();
+            try {
+                $user = [
+                    'name' => '',
+                    'username' => $mobile,
+                    'nickname' => '',
+                    'mobile' => $mobile,
+                    'avatar' => '',
+                    'create_time' => date('Y-m-d H:i:s'),
+                    'update_time' => date('Y-m-d H:i:s'),
+                ];
+                $user_id = Db::table('user')->insertGetId($user);
+                Db::table('user_credit')->insert(['user_id' => $user_id]);
+                Db::table('user_core')->where('id', '=', $core_id)->update(['user_id' => $user_id]);
+                Db::commit();
+            }catch (\Throwable $ex){
+                Db::rollBack();
+                throw new LogicException($ex->getMessage());
+            }
             $user['id'] = $user_id;
             return $this->returnLoginData((object)$user);
         }

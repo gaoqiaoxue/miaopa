@@ -3,7 +3,6 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
 use App\Middleware\ApiMiddleware;
 use App\Request\CabinetItemRequest;
 use App\Request\CabinetRequest;
@@ -21,7 +20,7 @@ class CabinetController extends AbstractController
 
 
     #[Middleware(ApiMiddleware::class)]
-    public function getMyList(AuthTokenInterface $authToken): array
+    public function getMyList(): array
     {
         $params = $this->request->all();
         $user_id = $this->request->getAttribute('user_id');
