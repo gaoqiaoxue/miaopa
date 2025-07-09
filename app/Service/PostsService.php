@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
+use App\Constants\PostType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
@@ -60,15 +61,56 @@ class PostsService
 
     }
 
-    public function getInfo(int $post_id): object
+    public function getApiList(array $params): array
+    {
+        $query = Db::table('post')
+            ->leftJoin('user', 'user.id', '=', 'post.user_id');
+        if (!empty($params['title'])) {
+            $query->where('post.title', 'like', '%' . $params['title'] . '%');
+        }
+        if (!empty($params['post_type'])) {
+            $query->where('post.post_type', '=', $params['post_type']);
+        }
+        if (!empty($params['circle_id'])) {
+            $query->where('post.circle_id', '=', $params['circle_id']);
+        }
+        if (!empty($params['user_id'])) {
+            $query->where('post.user_id', '=', $params['user_id']);
+        }
+        if (isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
+            $query->where('post.audit_status', '=', $params['audit_status']);
+        }
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
+            $query->whereBetween('post.create_time', [$params['start_time'], $params['end_time']]);
+        }
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+        $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
+            'post.audit_status', 'post.circle_id', Db::raw("SUBSTRING_INDEX(media, ',', 1) AS cover"),
+            'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
+            ->orderBy('post.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        if(!empty($data['items'])){
+            $covers = array_column($data['items'], 'cover');
+            $covers = $this->fileService->getFileInfoByIds($covers);
+            foreach ($data['items'] as $key => $item) {
+                $item->cover = $covers[$item->cover] ?? [];
+            }
+        }
+        return $data;
+
+    }
+
+    public function getInfo(int $post_id, array $cate = []): object
     {
         $post = Db::table('post')
             ->leftJoin('circle', 'circle.id', '=', 'post.circle_id')
             ->leftJoin('user', 'user.id', '=', 'post.user_id')
             ->where('post.id', '=', $post_id)
             ->select(['post.id', 'post.title', 'post.content', 'post.media', 'post.post_type',
-                'post.audit_status', 'post.audit_result', 'post.circle_id', 'circle.name as circle_name',
-                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
+                'post.audit_status', 'post.audit_result', 'post.circle_id', 'circle.cover as circle_cover', 'circle.name as circle_name',
+                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'])
             ->first();
         if (!$post) {
             throw new LogicException('帖子不存在');
@@ -78,6 +120,12 @@ class PostsService
             $post->media_urls = array_values($this->fileService->getFileInfoByIds($media));
         } else {
             $post->media_urls = [];
+        }
+        if(in_array('user_avatar', $cate)){
+            $post->user_avatar = $this->fileService->getAvatar($post->user_avatar);
+        }
+        if(in_array('circle_cover', $cate)){
+            $post->circle_cover = $this->fileService->getFilePathById($post->circle_cover);
         }
         return $post;
     }
@@ -152,14 +200,22 @@ class PostsService
         ]);
     }
 
-    public function addViewRecord(int $user_id, int $post_id)
+    public function addViewRecord(int $post_type, int $user_id, int $post_id)
     {
+        // TODO 检验重复记录
+        $type = match ($post_type){
+            PostType::DYNAMIC->value => 'dynamic',
+            PostType::QA->value => 'qa',
+            default => '',
+        };
         Db::beginTransaction();
         try {
             Db::table('post')->where('id', $post_id)->increment('view_count');
-            Db::table('post_view_record')->insert([
+
+            Db::table('view_history')->insert([
                 'user_id' => $user_id,
-                'post_id' => $post_id,
+                'content_type' => $type,
+                'content_id' => $post_id,
                 'create_time' => date('Y-m-d H:i:s'),
             ]);
             Db::commit();
@@ -167,5 +223,6 @@ class PostsService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
+        return true;
     }
 }

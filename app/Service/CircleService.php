@@ -6,6 +6,7 @@ use App\Constants\AbleStatus;
 use App\Constants\CircleRelationType;
 use App\Constants\CircleType;
 use App\Constants\PostType;
+use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
@@ -309,16 +310,28 @@ class CircleService
         if ((empty($has) && $status == 0) || (!empty($has) && $status == 1)) {
             return true;
         }
-        if ($status == 1) {
-            Db::table('circle_follow')->insert([
-                'circle_id' => $circle_id,
-                'user_id' => $user_id,
-                'create_time' => date('Y-m-d H:i:s'),
-            ]);
-        } else {
-            Db::table('circle_follow')
-                ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
-                ->delete();
+        Db::beginTransaction();
+        try {
+            if ($status == 1) {
+                $res1 = Db::table('circle_follow')->insert([
+                    'circle_id' => $circle_id,
+                    'user_id' => $user_id,
+                    'create_time' => date('Y-m-d H:i:s'),
+                ]);
+                $res2 = Db::table('circle')->where('id', $circle_id)->increment('follow_count', 1);
+            } else {
+                $res1 = Db::table('circle_follow')
+                    ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
+                    ->delete();
+                $res2 = Db::table('circle')->where('id', $circle_id)->decrement('follow_count', 1);
+            }
+            if(!$res1 || !$res2){
+                throw new LogicException('操作失败');
+            }
+            Db::commit();
+        }catch ( \Throwable $ex){
+            Db::rollBack();
+            throw new ParametersException($ex->getMessage());
         }
         return true;
     }
