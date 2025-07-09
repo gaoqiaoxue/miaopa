@@ -10,7 +10,7 @@ use Hyperf\DbConnection\Db;
 class ConfigService
 {
     #[Cacheable(prefix: 'system_config', ttl: 3600)]
-    public function getConfig()
+    public function getConfig(): object
     {
         $info = Db::table('system_config')
             ->where('id', '=', 1)
@@ -19,18 +19,18 @@ class ConfigService
             ->first();
         $info->continuous_sign_config = json_decode($info->continuous_sign_config, true);
         $info->stay_time_config = json_decode($info->stay_time_config, true);
-        return (array) $info;
+        return $info;
     }
 
     #[CacheEvict(prefix: 'system_config', value: "")]
-    public function update($params)
+    public function update($params): int
     {
         isset($params['continuous_sign_config']) && $params['continuous_sign_config'] = $this->setJson($params['continuous_sign_config']);
         isset($params['stay_time_config']) && $params['stay_time_config'] = $this->setJson($params['stay_time_config']);
         return Db::table('system_config')->where('id', '=', 1)->update($params);
     }
 
-    public function getValue($key)
+    public function getValue($key):string|array|null
     {
         $config = $this->getConfig();
         return isset($config->$key) ? $config->$key : null;

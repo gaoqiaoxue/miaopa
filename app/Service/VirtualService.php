@@ -252,13 +252,13 @@ class VirtualService
         if ($exchange->valid_time < time()) {
             throw new LogicException('已过期');
         }
-        if($exchange['item_type'] == VirtualType::FIGURE->value) {
+        if($exchange->item_type == VirtualType::FIGURE->value) {
             // 限制只能有一个形象，其他的形象先取消
             Db::table('virtual_exchange')
                 ->where('user_id', $user_id)
                 ->where('item_type', VirtualType::FIGURE->value)
                 ->update(['is_active' => 0]);
-        }elseif($exchange['item_type'] == VirtualType::MEDAL->value){
+        }elseif($exchange->item_type == VirtualType::MEDAL->value){
             // 限制只能激活3个勋章
             $count = Db::table('virtual_exchange')
                 ->where('user_id', $user_id)
