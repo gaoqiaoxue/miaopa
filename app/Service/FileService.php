@@ -60,6 +60,8 @@ class FileService
         $stream = fopen($file->getRealPath(), 'r');
         try {
             $this->filesystem->writeStream($storagePath, $stream);
+        }catch (\Throwable $throwable){
+            var_dump($throwable->getMessage());
         } finally {
             if (is_resource($stream)) {
                 fclose($stream);

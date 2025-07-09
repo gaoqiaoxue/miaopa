@@ -28,7 +28,7 @@ class BasicController extends AbstractController
      */
     public function dictionary(): array
     {
-        return [
+        return returnSuccess([
             'status' => AbleStatus::getMaps(),
             'circle_type' => CircleType::getMaps(),
             'circle_relation_type' => CircleRelationType::getMaps(),
@@ -41,7 +41,7 @@ class BasicController extends AbstractController
             'audit_status' => AuditStatus::getMaps(),
             'report_type' => ReportType::getMaps(),
             'report_reason' => ReportReason::getMaps(),
-        ];
+        ]);
     }
 
     public function upload(FileService $service): array
