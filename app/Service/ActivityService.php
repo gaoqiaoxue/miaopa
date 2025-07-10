@@ -4,9 +4,13 @@ namespace App\Service;
 
 use App\Constants\AbleStatus;
 use App\Constants\ActiveStatus;
+use App\Constants\ActivityType;
 use App\Constants\ActivityUserStatus;
 use App\Exception\ParametersException;
+use Carbon\Carbon;
+use http\Params;
 use Hyperf\Cache\Annotation\Cacheable;
+use Hyperf\Collection\Arr;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
@@ -51,8 +55,8 @@ class ActivityService
             $query->where('active_status', '=', $params['active_status']);
         }
         if (!empty($params['start_time']) && !empty($params['end_time'])) {
-            $query->where('start', '<', $params['end_time'])
-                ->where('end', '>', $params['start_time']);
+            $query->where('start', '<', strtotime($params['end_time']))
+                ->where('end', '>', strtotime($params['start_time']));
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -168,10 +172,10 @@ class ActivityService
         if (!empty($params['nickname'])) {
             $query->where('user.nickname', 'like', '%' . $params['nickname'] . '%');
         }
-        if(!empty($params['sex'])){
-            $query->where('user.sex', '=',  $params['sex']);
+        if (!empty($params['sex'])) {
+            $query->where('user.sex', '=', $params['sex']);
         }
-        if(!empty($params['start_time']) && !empty($params['end_time'])){
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
             $query->whereBetween('activity_user.create_time', [$params['start_time'], $params['end_time']]);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
@@ -182,4 +186,99 @@ class ActivityService
         $data = paginateTransformer($data);
         return $data;
     }
+
+
+    // 获取城市最近有活动的日期
+    public function getDates(int $city_id)
+    {
+        $sql = 'WITH RECURSIVE activity_dates AS (
+    SELECT 
+        start_date AS activity_date,
+        end_date
+    FROM mp_activity
+    WHERE status = 1 AND active_status in (1,2) AND city_id = :city_id
+    
+    UNION ALL
+    
+    SELECT 
+        activity_date + INTERVAL 1 DAY,
+        end_date
+    FROM activity_dates
+    WHERE activity_date < end_date
+)
+
+SELECT DISTINCT activity_date
+FROM activity_dates
+WHERE activity_date >= :current_date
+ORDER BY activity_date ASC
+LIMIT 7;';
+        $list = Db::select($sql, ['city_id' => $city_id, 'current_date' => date('Y-m-d')]);
+        foreach ($list as $item) {
+            $time = strtotime($item->activity_date);
+            $item->activity_date = date('m.d', $time);
+            $item->week = getChineseWeekday($time);
+        }
+        return $list;
+    }
+
+    // 获取城市热门活动
+    public function getHot(int $city_id): array
+    {
+        $items = Db::table('activity')
+            ->where('status', AbleStatus::ENABLE->value)
+            ->where('city_id', $city_id)
+            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value])
+            ->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time'])
+            ->orderBy('is_hot', 'desc')
+            ->orderBy('weight', 'desc')
+            ->orderBy('create_time', 'desc')
+            ->limit(3)
+            ->get()
+            ->toArray();
+        var_dump(Arr::last(Db::getQueryLog()));
+        return $this->transformerList($items);
+    }
+
+    public function getApiList(array $params)
+    {
+        $query = Db::table('activity')
+            ->where('status', AbleStatus::ENABLE->value)
+            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value]);
+        if (!empty($params['keyword'])) {
+            $query->where('name', 'like', '%' . $params['keyword'] . '%');
+        }
+        if (!empty($params['city_id'])) {
+            $query->where('city_id', $params['city_id']);
+        }
+        if (!empty($params['date'])) {
+            $start = Carbon::parse($params['date'])->startOfDay()->timestamp;
+            $end = $start + 86400;
+            $query->where('start', '<', $start)
+                ->where('end', '>', $end);
+        }
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+        $data = $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time'])
+            ->orderBy('weight', 'desc')
+            ->orderBy('create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        $data['items'] = $this->transformerList($data);
+        return $data;
+    }
+
+    protected function transformerList(array $items): array
+    {
+        if (!empty($items)) {
+            $covers = array_column($items, 'cover');
+            $covers = $this->fileService->getFilepathByIds($covers);
+            foreach ($items as $item) {
+                $item->tags = json_decode($item->tags, true);
+                $item->cover_url = $covers[$item->cover] ?? '';
+                $item->activity_type_text = ActivityType::from($item->activity_type)->getMessage();
+            }
+        }
+        return $items;
+    }
+
 }

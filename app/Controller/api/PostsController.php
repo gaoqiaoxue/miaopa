@@ -54,6 +54,7 @@ class PostsController extends AbstractController
     {
         $post_id = $request->input('post_id');
         $payload = $authToken->getUserData('default', false);
+        var_dump($payload);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $info = $this->service->getInfo($post_id);
         if(!empty($user_id) && $user_id != $info->user_id){

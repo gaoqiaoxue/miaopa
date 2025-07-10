@@ -10,6 +10,7 @@ class RoleRequest extends FormRequest
 {
     protected array $scenes = [
         'id' => ['role_id'],
+        'user_add' => ['name', 'alias', 'role_type', 'author', 'circle_id', 'description', 'images', 'create_at'],
         'add' => ['name', 'alias', 'cover', 'role_type', 'author', 'circle_id', 'weight', 'description', 'images', 'status'],
         'edit' => ['role_id', 'name', 'alias', 'cover', 'role_type', 'author', 'circle_id', 'weight', 'description', 'images', 'status'],
         'change_status' => ['role_id', 'status'],
@@ -41,6 +42,7 @@ class RoleRequest extends FormRequest
             'description' => 'string',
             'images' => 'array',
             'status' => 'integer|in:0,1',
+            'create_at' => 'date',
         ];
     }
 

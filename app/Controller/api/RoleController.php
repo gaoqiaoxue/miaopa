@@ -11,7 +11,7 @@ class RoleController extends AbstractController
 {
     protected RoleService $roleService;
 
-    #[Scene('add')]
+    #[Scene('user_add')]
     public function add(RoleRequest $request): array
     {
         $params = $request->validated();

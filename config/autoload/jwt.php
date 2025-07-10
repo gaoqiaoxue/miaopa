@@ -89,7 +89,7 @@ return [
         'default' => [
             'secret' =>  env('JWT_SECRET', 'gaoqiaoxuemiaopa'),
             'login_type' => env('JWT_LOGIN_TYPE', 'mpop'),
-            'sso_key' => 'uid',
+            'sso_key' => 'user_id',
             'ttl' => env('JWT_TTL', 7*24*3600),
         ],
         'admin' => [

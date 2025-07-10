@@ -15,6 +15,7 @@ use App\Constants\RoleType;
 use App\Constants\Sex;
 use App\Constants\VirtualType;
 use App\Controller\AbstractController;
+use App\Library\Contract\MapWebInterface;
 use App\Service\FileService;
 use App\Service\RegionService;
 use Hyperf\HttpServer\Annotation\AutoController;
@@ -63,4 +64,30 @@ class BasicController extends AbstractController
         $regions = $service->getRegionsByPid($pid);
         return returnSuccess($regions);
     }
+
+
+    /**
+     * 获取城市列表（按拼音首字母）
+     * @return array
+     */
+    public function getCitys(RegionService $service): array
+    {
+        $regions = $service->getCitys();
+        return returnSuccess($regions);
+    }
+
+    /**
+     * 根据经纬度获取定位城市ID
+     */
+    public function getCityByLatLon(MapWebInterface $service): array
+    {
+        $params = $this->request->all();
+        if (empty($params['lat']) || empty($params['lon'])) {
+            return returnError('请传入经纬度');
+        }
+        $info = $service->getRegionInfoByLonLat($params['lon'], $params['lat']);
+        return returnSuccess($info);
+    }
+
+
 }

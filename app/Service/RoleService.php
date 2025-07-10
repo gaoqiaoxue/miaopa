@@ -74,7 +74,7 @@ class RoleService
         $info = Db::table('role')
             ->where(['id' => $role_id])
             ->select(['id', 'name', 'alias', 'cover', 'role_type', 'author', 'circle_id', 'weight',
-                'images', 'description', 'status', 'audit_status', 'audit_result', 'source', 'create_by', 'create_time'])
+                'images', 'description', 'status', 'audit_status', 'audit_result', 'source', 'create_at', 'create_by', 'create_time'])
             ->first();
         if (!$info) {
             throw new LogicException('角色不存在');
@@ -143,20 +143,22 @@ class RoleService
 
     protected function generalData(array $params, bool $is_add = false, $create_by = 0, $source = 'admin'): array
     {
+        $cover = !empty($params['cover']) ? $params['cover'] : ($params['images'][0] ?? 0);
         $data = [
             'name' => $params['name'],
             'alias' => $params['alias'] ?? '',
-            'cover' => $params['cover'] ?? 0,
+            'cover' => $cover,
             'role_type' => $params['role_type'] ?? 0,
             'author' => $params['author'] ?? '',
             'circle_id' => $params['circle_id'] ?? 0,
             'weight' => $params['weight'] ?? 100,
             'description' => $params['description'] ?? '',
             'images' => implode(',', empty($params['images']) ? [] : $params['images']),
-            'status' => $params['status'] ?? 0,
+            'status' => $params['status'] ?? 1,
             'update_time' => date('Y-m-d H:i:s'),
         ];
         if ($is_add) {
+            $data['create_at'] = $params['create_at'] ?? date('Y-m-d');
             $data['create_time'] = date('Y-m-d H:i:s');
             $data['create_by'] = $create_by;
             $data['source'] = $source;

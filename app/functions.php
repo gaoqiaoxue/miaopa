@@ -145,3 +145,21 @@ if (!function_exists('getPublishTime')) {
         }
     }
 }
+
+if (!function_exists('getChineseWeekday')) {
+    function getChineseWeekday($time)
+    {
+        $weekday = date('N', $time);
+        // 映射数字到中文星期几
+        $weekdayMap = [
+            1 => '周一',
+            2 => '周二',
+            3 => '周三',
+            4 => '周四',
+            5 => '周五',
+            6 => '周六',
+            7 => '周日'
+        ];
+        return $weekdayMap[$weekday];
+    }
+}

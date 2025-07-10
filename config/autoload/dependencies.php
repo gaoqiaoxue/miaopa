@@ -12,4 +12,5 @@ declare(strict_types=1);
 return [
     // Jwt Auth Token
     \App\Library\Contract\AuthTokenInterface::class => \App\Library\JwtAuthTokenLib::class,
+    \App\Library\Contract\MapWebInterface::class => \App\Library\Map\TmapWebLib::class,
 ];
