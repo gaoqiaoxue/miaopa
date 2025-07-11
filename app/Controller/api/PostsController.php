@@ -9,6 +9,7 @@ use App\Middleware\ApiMiddleware;
 use App\Request\PostsRequest;
 use App\Service\PostsService;
 use App\Service\UserFollowService;
+use App\Service\UserViewRecordService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
@@ -37,10 +38,10 @@ class PostsController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function getUserPosts():array
+    public function getUserPosts(): array
     {
         $params = $this->request->all();
-        if(empty($params['user_id'])){
+        if (empty($params['user_id'])) {
             return returnError('缺少必要参数user_id');
         }
         $params['audit_status'] = AuditStatus::PASSED->value;
@@ -50,17 +51,21 @@ class PostsController extends AbstractController
     }
 
     #[Scene('id')]
-    public function detail(PostsRequest $request, AuthTokenInterface $authToken, UserFollowService $followService): array
+    public function detail(
+        PostsRequest          $request,
+        AuthTokenInterface    $authToken,
+        UserFollowService     $followService,
+        UserViewRecordService $viewService
+    ): array
     {
         $post_id = $request->input('post_id');
         $payload = $authToken->getUserData('default', false);
-        var_dump($payload);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $info = $this->service->getInfo($post_id);
-        if(!empty($user_id) && $user_id != $info->user_id){
-            $this->service->addViewRecord($info->post_type, $user_id, $post_id);
+        if (!empty($user_id) && $user_id != $info->user_id) {
+            $viewService->addPostViewRecord($info->post_type, $user_id, $post_id);
             $info->is_follow = $followService->checkIsFollow($user_id, $info->user_id);
-        }else{
+        } else {
             $info->is_follow = 0;
         }
         return returnSuccess($info);

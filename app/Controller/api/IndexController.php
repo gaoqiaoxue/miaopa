@@ -21,7 +21,7 @@ class IndexController extends AbstractController
 //        $user_data = $this->request->getAttribute("user_data");
         return [
 //            'data' => $user_data,
-            'value' => $service->getRegionInfoByLonLat('123','32')
+            'value' => $service->getLatLonByAddress('郑州市高新区正弘汇')
         ];
     }
 

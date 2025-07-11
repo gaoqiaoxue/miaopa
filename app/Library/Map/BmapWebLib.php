@@ -65,6 +65,39 @@ class BmapWebLib implements MapWebInterface
         return $region;
     }
 
+    #[Cacheable(prefix: 'address_parse', ttl: 86400)] // 缓存24小时
+    public function getLatLonByAddress($address): array
+    {
+        $client = $this->clientFactory->create([
+            'base_uri' => 'https://api.map.baidu.com/',
+            'timeout' => 5.0,
+        ]);
+        // 百度地理编码API
+        $response = $client->get('geocoding/v3/', [
+            'query' => [
+                'ak' => $this->config['key'], // 百度API的ak
+                'address' => $address,
+                'output' => 'json',
+                'ret_coordtype' => 'gcj02ll' // 返回的坐标类型，可选gcj02ll(国测局坐标)、bd09ll(百度坐标)
+            ]
+        ]);
+        $res = json_decode($response->getBody()->getContents(), true);
+        if ($res['status'] != 0 || empty($res['result'])) {
+            throw new LogicException($res['message'] ?? '地址解析失败');
+        }
+        $result = $res['result'];
+        $location = $result['location'];
+        return [
+            'lon' => $location['lng'], // 经度
+            'lat' => $location['lat'], // 纬度
+            'confidence' => $result['confidence'] ?? 0, // 可信度(0-100)
+            'comprehension' => $result['comprehension'] ?? 0, // 理解度(0-100)
+            'level' => $result['level'] ?? '', // 地址类型
+            'formatted_address' => $result['formatted_address'] ?? $address,
+            'precise' => $result['precise'] ?? 0, // 是否精确查找(1为精确，0为不精确)
+        ];
+    }
+
     #[Cacheable(prefix: 'ip_code', ttl: 3600)]
     public function getRegionInfoByIp($ip): array
     {

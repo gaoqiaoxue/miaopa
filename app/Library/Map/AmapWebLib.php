@@ -66,6 +66,39 @@ class AmapWebLib implements MapWebInterface
         return $region;
     }
 
+    #[Cacheable(prefix: 'address_parse', ttl: 86400)] // 缓存24小时
+    public function getLatLonByAddress($address): array
+    {
+        $client = $this->clientFactory->create([
+            'base_uri' => $this->baseUri,
+            'timeout' => 5.0,
+        ]);
+        $response = $client->get('geocode/geo', [
+            'query' => [
+                'key' => $this->config['key'],
+                'address' => $address,
+                'output' => 'json'
+            ]
+        ]);
+        $res = json_decode($response->getBody()->getContents(), true);
+        if ($res['status'] != '1' || empty($res['geocodes'])) {
+            throw new LogicException($res['info'] ?? '获取经纬度失败');
+        }
+        $location = explode(',', $res['geocodes'][0]['location']);
+        if (count($location) !== 2) {
+            throw new LogicException('经纬度格式错误');
+        }
+        return [
+            'lon' => $location[0], // 经度
+            'lat' => $location[1], // 纬度
+            'formatted_address' => $res['geocodes'][0]['formatted_address'] ?? '',
+            'province' => $res['geocodes'][0]['province'] ?? '',
+            'city' => $res['geocodes'][0]['city'] ?? '',
+            'district' => $res['geocodes'][0]['district'] ?? '',
+            'adcode' => $res['geocodes'][0]['adcode'] ?? '',
+        ];
+    }
+
     #[Cacheable(prefix: 'ip_code', ttl: 3600)]
     public function getRegionInfoByIp($ip):array
     {

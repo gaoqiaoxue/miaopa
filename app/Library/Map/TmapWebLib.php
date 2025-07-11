@@ -65,6 +65,40 @@ class TmapWebLib implements MapWebInterface
         return $region;
     }
 
+    #[Cacheable(prefix: 'address_parse', ttl: 86400)] // 缓存24小时
+    public function getLatLonByAddress($address): array
+    {
+        $client = $this->clientFactory->create([
+            'base_uri' => 'https://apis.map.qq.com/',
+            'timeout' => 5.0,
+        ]);
+        $response = $client->get('ws/geocoder/v1/', [
+            'query' => [
+                'key' => $this->config['key'], // 腾讯地图API key
+                'address' => $address,
+                'output' => 'json'
+            ]
+        ]);
+        $res = json_decode($response->getBody()->getContents(), true);
+        if ($res['status'] != 0) {
+            throw new LogicException($res['message'] ?? '地址解析失败');
+        }
+        $result = $res['result'];
+        $location = $result['location'];
+        return [
+            'lon' => $location['lng'], // 经度
+            'lat' => $location['lat'], // 纬度
+            'address' => $result['address'] ?? $address,
+            'formatted_address' => $result['title'] ?? $address,
+            'adcode' => $result['ad_info']['adcode'] ?? '',
+            'province' => $result['ad_info']['province'] ?? '',
+            'city' => $result['ad_info']['city'] ?? '',
+            'district' => $result['ad_info']['district'] ?? '',
+            'reliability' => $result['reliability'] ?? 0, // 可信度(1-10)
+            'level' => $result['level'] ?? 0, // 地址类型
+        ];
+    }
+
     #[Cacheable(prefix: 'ip_code', ttl: 3600)]
     public function getRegionInfoByIp($ip): array
     {
