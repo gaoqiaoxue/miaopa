@@ -11,6 +11,7 @@ class CommentRequest extends FormRequest
         'set_top' => ['comment_id', 'is_top'],
         'comment' => ['post_id', 'content', 'images'],
         'reply' => ['parent_id', 'content', 'images'],
+        'like' => ['comment_id', 'status']
     ];
 
     /**
@@ -33,6 +34,7 @@ class CommentRequest extends FormRequest
             'images' => 'array',
             'comment_id' => 'required|integer',
             'is_top' => 'in:0,1',
+            'status' => 'in:0,1',
         ];
     }
 
@@ -50,6 +52,7 @@ class CommentRequest extends FormRequest
             'comment_id.required' => '评论ID不能为空',
             'comment_id.integer' => '评论ID必须为整数',
             'is_top.in' => '顶置评论必须为0或1',
+            'status.in' => '点赞状态必须为0或1',
         ];
 
     }

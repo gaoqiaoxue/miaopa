@@ -6,6 +6,7 @@ use App\Constants\AuditStatus;
 use App\Constants\AuditType;
 use App\Constants\PostType;
 use App\Exception\LogicException;
+use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
@@ -43,7 +44,7 @@ class PostsService
         if (isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
             $query->where('post.audit_status', '=', $params['audit_status']);
         }
-        if(!empty($params['source'])){
+        if (!empty($params['source'])) {
             $query->where('post.source', '=', $params['source']);
         }
         if (!empty($params['start_time']) && !empty($params['end_time'])) {
@@ -91,7 +92,7 @@ class PostsService
             ->orderBy('post.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
-        if(!empty($data['items'])){
+        if (!empty($data['items'])) {
             $covers = array_column($data['items'], 'cover');
             $covers = $this->fileService->getFileInfoByIds($covers);
             foreach ($data['items'] as $key => $item) {
@@ -121,10 +122,10 @@ class PostsService
         } else {
             $post->media_urls = [];
         }
-        if(in_array('user_avatar', $cate)){
+        if (in_array('user_avatar', $cate)) {
             $post->user_avatar = $this->fileService->getAvatar($post->user_avatar);
         }
-        if(in_array('circle_cover', $cate)){
+        if (in_array('circle_cover', $cate)) {
             $post->circle_cover = $this->fileService->getFilePathById($post->circle_cover);
         }
         return $post;
@@ -152,9 +153,9 @@ class PostsService
                 'audit_status' => AuditStatus::PASSED->value,
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
-            $this->auditService->pass(AuditType::POST->value,$post_id,$cur_user_id);
+            $this->auditService->pass(AuditType::POST->value, $post_id, $cur_user_id);
             Db::commit();
-        }catch (\Throwable $ex) {
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
@@ -175,16 +176,16 @@ class PostsService
                 'audit_status' => AuditStatus::REJECTED->value,
                 'audit_result' => $reject_reason,
             ]);
-            $this->auditService->reject(AuditType::POST->value,$post_id,$cur_user_id,$reject_reason);
+            $this->auditService->reject(AuditType::POST->value, $post_id, $cur_user_id, $reject_reason);
             Db::commit();
-        }catch (\Throwable $ex) {
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
         return true;
     }
 
-    public function publish(int $user_id, array $params, $source = 'user'):int
+    public function publish(int $user_id, array $params, $source = 'user'): int
     {
         return Db::table('post')->insertGetId([
             'user_id' => $user_id,
@@ -192,11 +193,56 @@ class PostsService
             'title' => $params['title'],
             'content' => $params['content'],
             'post_type' => $params['post_type'],
-            'media' => empty($params['media']) ? '' : implode(',',$params['media']),
+            'media' => empty($params['media']) ? '' : implode(',', $params['media']),
             'create_time' => date('Y-m-d H:i:s'),
             'update_time' => date('Y-m-d H:i:s'),
             'source' => $source,
             'audit_status' => $source == 'user' ? AuditStatus::PENDING->value : AuditStatus::PASSED->value,
         ]);
+    }
+
+    public function like(int $post_id, int $user_id, int $status): bool
+    {
+        $has = Db::table('post_like')
+            ->where(['post_id' => $post_id, 'user_id' => $user_id])
+            ->count();
+        if ((empty($has) && $status == 0) || (!empty($has) && $status == 1)) {
+            return true;
+        }
+        Db::beginTransaction();
+        try {
+            if ($status == 1) {
+                $res1 = Db::table('post_like')->insert([
+                    'post_id' => $post_id,
+                    'user_id' => $user_id,
+                    'create_time' => date('Y-m-d H:i:s'),
+                ]);
+                $res2 = Db::table('post')->where('id', '=', $post_id)->increment('like_count');
+            } else {
+                $res1 = Db::table('post_like')
+                    ->where(['post_id' => $post_id, 'user_id' => $user_id])
+                    ->delete();
+                $res2 = Db::table('post')->where('id', '=', $post_id)->decrement('like_count');
+            }
+            if (!$res1 || !$res2) {
+                throw new LogicException('操作失败');
+            }
+            Db::commit();
+        } catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new ParametersException($ex->getMessage());
+        }
+        return true;
+    }
+
+    public function checkIsLike(int $post_id, int $user_id): int
+    {
+        if (empty($user_id) || empty($post_id)) {
+            return 0;
+        }
+        $has = Db::table('post_like')
+            ->where(['post_id' => $post_id, 'user_id' => $user_id])
+            ->count();
+        return $has > 0 ? 1 : 0;
     }
 }

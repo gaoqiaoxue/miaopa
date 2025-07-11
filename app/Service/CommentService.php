@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
+use App\Constants\PostType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
@@ -33,7 +34,7 @@ class CommentService
         if (!empty($params['post_id'])) {
             $query->where('comment.post_id', '=', $params['post_id']);
         }
-        if(!empty($params['source'])){
+        if (!empty($params['source'])) {
             $query->where('comment.source', '=', $params['source']);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
@@ -50,15 +51,15 @@ class CommentService
         $comment = Db::table('comment')
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
             ->where(['comment.id' => $comment_id])
-            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.create_time', 'comment.user_id','user.nickname'])
+            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
             ->first();
         if (!$comment) {
             throw new LogicException('评论不存在');
         }
-        if(!empty($comment->images)){
+        if (!empty($comment->images)) {
             $images = explode(',', $comment->images);
             $comment->image_urls = array_values($this->fileService->getFilepathByIds($images));
-        }else{
+        } else {
             $comment->image_urls = [];
         }
         return $comment;
@@ -85,7 +86,7 @@ class CommentService
         $comment = Db::table('comment')
             ->where('id', '=', $comment_id)
             ->first(['id', 'source', 'audit_status']);
-        if(empty($comment)){
+        if (empty($comment)) {
             throw new LogicException('帖子不存在');
         }
         if ($comment->audit_status != AuditStatus::PENDING->value) {
@@ -97,9 +98,9 @@ class CommentService
                 'audit_status' => AuditStatus::PASSED->value,
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
-            $this->auditService->pass(AuditType::COMMENT->value,$comment_id,$cur_user_id);
+            $this->auditService->pass(AuditType::COMMENT->value, $comment_id, $cur_user_id);
             Db::commit();
-        }catch (\Throwable $ex) {
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
@@ -111,7 +112,7 @@ class CommentService
         $comment = Db::table('comment')
             ->where('id', '=', $comment_id)
             ->first(['id', 'audit_status']);
-        if(empty($comment)){
+        if (empty($comment)) {
             throw new LogicException('帖子不存在');
         }
         if ($comment->audit_status != AuditStatus::PENDING->value) {
@@ -123,12 +124,174 @@ class CommentService
                 'audit_status' => AuditStatus::REJECTED->value,
                 'audit_result' => $reject_reason,
             ]);
-            $this->auditService->reject(AuditType::COMMENT->value,$comment_id,$cur_user_id,$reject_reason);
+            $this->auditService->reject(AuditType::COMMENT->value, $comment_id, $cur_user_id, $reject_reason);
             Db::commit();
-        }catch (\Throwable $ex) {
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
         return true;
+    }
+
+    public function comment(int $user_id, int $post_id, string $content, array $images = [])
+    {
+        $post = Db::table('post')->where(['id' => $post_id])->first(['id', 'post_type']);
+        if (empty($post)) {
+            throw new LogicException('帖子不存在');
+        }
+        Db::beginTransaction();
+        try {
+            $comment_id = Db::table('comment')->insertGetId([
+                'user_id' => $user_id,
+                'post_id' => $post_id,
+                'post_type' => $post->post_type,
+                'content' => $content,
+                'images' => empty($images) ? '' : implode(',', $images),
+                'audit_status' => AuditStatus::PENDING->value,
+                'create_time' => date('Y-m-d H:i:s'),
+                'update_time' => date('Y-m-d H:i:s')
+            ]);
+            $this->auditService->addAuditRecord(AuditType::COMMENT->value, $comment_id, $user_id);
+            Db::table('post')->where('id', $post_id)->increment('comment_count', 1);
+            Db::commit();
+        } catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+        return true;
+    }
+
+    public function reply(int $user_id, int $parent_id, string $content, array $images = [])
+    {
+        $comment = Db::table('comment')
+            ->where(['id' => $parent_id])
+            ->first(['id', 'user_id', 'post_id', 'post_type', 'parent_id', 'answer_id']);
+        if (empty($comment)) {
+            throw new LogicException('评论不存在');
+        }
+        if ($comment->post_type == PostType::QA->value) {
+            if (empty($comment->answer_id)) { // 回答的评论
+                $answer_id = $parent_id;
+                $this_parent_id = 0;
+                $at_user_id = 0;
+            } else { //评论回复
+                $answer_id = $comment->answer_id;
+                if (empty($comment->parent_id)) { // 一级回复
+                    $this_parent_id = $parent_id;
+                    $at_user_id = 0;
+                } else { // 多级回复
+                    $this_parent_id = $comment->parent_id;
+                    $at_user_id = $comment->user_id;
+                }
+            }
+        } else {
+            $answer_id = 0;
+            if (empty($comment->parent_id)) { // 一级回复
+                $this_parent_id = $parent_id;
+                $at_user_id = 0;
+            } else { // 多级回复
+                $this_parent_id = $comment->parent_id;
+                $at_user_id = $comment->user_id;
+            }
+        }
+        Db::beginTransaction();
+        try {
+            $comment_id = Db::table('comment')->insertGetId([
+                'user_id' => $user_id,
+                'post_id' => $comment->post_id,
+                'post_type' => $comment->post_type,
+                'parent_id' => $this_parent_id,
+                'answer_id' => $answer_id,
+                'at_user_id' => $at_user_id,
+                'content' => $content,
+                'images' => empty($images) ? '' : implode(',', $images),
+                'audit_status' => AuditStatus::PENDING->value,
+                'create_time' => date('Y-m-d H:i:s'),
+                'update_time' => date('Y-m-d H:i:s')
+            ]);
+            $this->auditService->addAuditRecord(AuditType::COMMENT->value, $comment_id, $user_id);
+            Db::table('comment')->where('id', $comment->post_id)->increment('reply_count', 1);
+            Db::commit();
+        } catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+        return true;
+    }
+
+    public function getCommentList(array $params, int $user_id, array $cate = []): array
+    {
+        // TODO
+    }
+
+    public function getReplyList(array $params, int $user_id, array $cate = []): array
+    {
+        // TODO
+    }
+
+    public function getCommentDetail(int $comment_id, int $user_id): object
+    {
+        $comment = Db::table('comment')
+            ->leftJoin('user', 'user.id', '=', 'comment.user_id')
+            ->where(['comment.id' => $comment_id])
+            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
+                'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
+            ->first();
+        if (!$comment) {
+            throw new LogicException('评论不存在');
+        }
+        if (!empty($comment->images)) {
+            $images = explode(',', $comment->images);
+            $comment->image_urls = array_values($this->fileService->getFilepathByIds($images));
+        } else {
+            $comment->image_urls = [];
+        }
+        $comment->is_like = $this->checkIsLike($comment_id, $user_id);
+        return $comment;
+    }
+
+    public function like(int $comment_id, int $user_id, int $status): bool
+    {
+        $has = Db::table('comment_like')
+            ->where(['comment_id' => $comment_id, 'user_id' => $user_id])
+            ->count();
+        if ((empty($has) && $status == 0) || (!empty($has) && $status == 1)) {
+            return true;
+        }
+        Db::beginTransaction();
+        try {
+            if ($status == 1) {
+                $res1 = Db::table('comment_like')->insert([
+                    'comment_id' => $comment_id,
+                    'user_id' => $user_id,
+                    'create_time' => date('Y-m-d H:i:s'),
+                ]);
+                $res2 = Db::table('comment')->where('id', '=', $comment_id)->increment('like_count');
+            } else {
+                $res1 = Db::table('comment_like')
+                    ->where(['comment_id' => $comment_id, 'user_id' => $user_id])
+                    ->delete();
+                $res2 = Db::table('comment')->where('id', '=', $comment_id)->decrement('like_count');
+            }
+            if (!$res1 || !$res2) {
+                throw new LogicException('操作失败');
+            }
+            Db::commit();
+        } catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new ParametersException($ex->getMessage());
+        }
+        return true;
+    }
+
+    public function checkIsLike(int $comment_id, int $user_id): int
+    {
+        if (empty($user_id) || empty($comment_id)) {
+            return 0;
+        }
+        $has = Db::table('comment_like')
+            ->where(['comment_id' => $comment_id, 'user_id' => $user_id])
+            ->count();
+        return $has > 0 ? 1 : 0;
     }
 }
