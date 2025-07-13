@@ -10,6 +10,8 @@ use Hyperf\Di\Annotation\Inject;
 
 class UserService
 {
+    #[Inject]
+    protected CreditService $creditService;
 
     public function getList(array $params): array
     {
@@ -29,6 +31,9 @@ class UserService
         if (!empty($params['id'])) {
             $query->where('id', '=', $params['id']);
         }
+        if(!empty($params['start_time']) && !empty($params['end_time'])){
+            $query->whereBetween('create_time', [$params['start_time'], $params['end_time']]);
+        }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $columns = ['id', 'name', 'username', 'nickname', 'sex', 'avatar', 'signature', 'region', 'school', 'mobile', 'create_time'];
@@ -47,8 +52,7 @@ class UserService
         }
         $user->avatar_url = getAvatar($user->avatar);
         $user->created_days = $this->getCreatedDays($user->create_time);
-        // TODO 获取声望值
-        $user->prestige = 0;
+        $user->prestige = $this->creditService->getPrestige($user->id);
         return $user;
     }
 

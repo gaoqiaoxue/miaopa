@@ -24,7 +24,7 @@ class RoleController extends AbstractController
     public function detail(RoleRequest $request):array
     {
         $params = $request->validated();
-        $detail = $this->roleService->getInfo($params['role_id'],['cover', 'images', 'circle']);
+        $detail = $this->roleService->getInfo($params['role_id'],['circle']);
         return returnSuccess($detail);
     }
 }

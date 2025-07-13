@@ -84,21 +84,20 @@ class PostsService
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
-            'post.audit_status', 'post.circle_id', Db::raw("SUBSTRING_INDEX(media, ',', 1) AS cover"),
+            'post.audit_status', 'post.circle_id', 'post.media',
             'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
             ->orderBy('post.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
             foreach ($data['items'] as $key => $item) {
-                $item->cover_url = generateFileUrl($item->cover);
+                $this->objectTransformer($item, ['cover']);
             }
         }
         return $data;
-
     }
 
-    public function getInfo(int $post_id, array $cate = []): object
+    public function getInfo(int $post_id, array $cate = [], int $user_id = 0): object
     {
         $post = Db::table('post')
             ->leftJoin('circle', 'circle.id', '=', 'post.circle_id')
@@ -111,14 +110,31 @@ class PostsService
         if (!$post) {
             throw new LogicException('帖子不存在');
         }
-        $post->media_urls = generateMulFileUrl($post->media);
-        if (in_array('user_avatar', $cate)) {
-            $post->user_avatar = getAvatar($post->user_avatar);
-        }
-        if (in_array('circle_cover', $cate)) {
-            $post->circle_cover = generateFileUrl($post->circle_cover);
-        }
+        $this->objectTransformer($post, $cate, ['user_id' => $user_id]);
         return $post;
+    }
+
+    protected function objectTransformer(object $item, array $cate = [], array $params = [])
+    {
+        if (property_exists($item, 'user_avatar')) {
+            $item->user_avatar = getAvatar($item->user_avatar);
+        }
+        if (property_exists($item, 'circle_cover')) {
+            $item->circle_cover = generateFileUrl($item->circle_cover);
+        }
+        if (property_exists($item, 'media')) {
+            $item->media_urls = generateMulFileUrl($item->media);
+        }
+        if (in_array('cover', $cate)) {
+            $item->cover = generateMulFileUrl($item->media)[0] ?? [];
+        }
+        if (in_array('is_like', $cate)) {
+            if (isset($params['like_ids'])) {
+                $item->is_like = in_array($item->id, $params['like_ids']) ? 1 : 0;
+            } else {
+                $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
+            }
+        }
     }
 
     public function delete(int $post_id): int

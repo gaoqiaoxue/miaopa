@@ -61,7 +61,7 @@ class PostsController extends AbstractController
         $post_id = $request->input('post_id');
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
-        $info = $this->service->getInfo($post_id);
+        $info = $this->service->getInfo($post_id, ['is_like'], $user_id);
         if (!empty($user_id) && $user_id != $info->user_id) {
             $viewService->addPostViewRecord($info->post_type, $user_id, $post_id);
             $info->is_follow = $followService->checkIsFollow($user_id, $info->user_id);

@@ -5,7 +5,6 @@ namespace App\Service;
 use App\Constants\CabinetType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
-use Hyperf\Di\Annotation\Inject;
 
 class CabinetService
 {
@@ -114,8 +113,7 @@ class CabinetService
         if (empty($info)) {
             throw new LogicException('物品不存在');
         }
-        $images = generateMulFileUrl($info->images);
-        $info->images = array_values($images);
+        $info->images = generateMulFileUrl($info->images);
         return $info;
     }
 

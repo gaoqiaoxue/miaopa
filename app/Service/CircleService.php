@@ -56,7 +56,7 @@ class CircleService
             throw new ParametersException('请传入圈子ID');
         $circle = Db::table('circle')
             ->where(['id' => $circle_id])
-            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time'])
+            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'weight', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time'])
             ->first();
         if (!$circle) {
             throw new ParametersException('圈子不存在');
@@ -270,23 +270,14 @@ class CircleService
             throw new ParametersException('请传入圈子ID');
         $circle = Db::table('circle')
             ->where(['id' => $circle_id])
-            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time'])
+            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time', 'follow_count'])
             ->first();
         if (!$circle) {
             throw new ParametersException('圈子不存在');
         }
         $circle->bg_url = generateFileUrl($circle->bg);
         $circle->cover_url = generateFileUrl($circle->cover);
-        $circle->follow_num = Db::table('circle_follow')
-            ->where('circle_id', '=', $circle_id)
-            ->count();
-        $is_follow = 0;
-        if (!empty($user_id)) {
-            $is_follow = Db::table('circle_follow')
-                ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
-                ->count();
-        }
-        $circle->is_follow = $is_follow ? 1 : 0;
+        $circle->is_follow = $this->checkIsFollow($circle_id, $user_id);
         return $circle;
     }
 
@@ -322,5 +313,16 @@ class CircleService
             throw new ParametersException($ex->getMessage());
         }
         return true;
+    }
+
+    protected function checkIsFollow(int $circle_id, int $user_id): int
+    {
+        if(empty($user_id) || empty($circle_id)){
+            return 0;
+        }
+        $is_follow = Db::table('circle_follow')
+            ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
+            ->count();
+        return $is_follow ? 1 : 0;
     }
 }

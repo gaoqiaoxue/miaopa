@@ -64,7 +64,7 @@ class RoleService
         return $data;
     }
 
-    public function getInfo(int $role_id, array $cate = ['cover', 'images', 'circle', 'create_by']): object
+    public function getInfo(int $role_id, array $cate = ['circle', 'create_by']): object
     {
         $info = Db::table('role')
             ->where(['id' => $role_id])
@@ -74,21 +74,21 @@ class RoleService
         if (!$info) {
             throw new LogicException('角色不存在');
         }
-        return $this->transformerObject($info, $cate);
+        return $this->objectTransformer($info, $cate);
     }
 
-    protected function transformerObject(object $info, array $cate = [], array $extra = []): object
+    protected function objectTransformer(object $info, array $cate = [], array $extra = []): object
     {
-        if (in_array('cover', $cate)) {
+        if (property_exists($info, 'cover')) {
             $info->cover_url = generateFileUrl($info->cover);
         }
-        if (in_array('images', $cate)) {
+        if (property_exists($info, 'images')) {
             $info->images = generateMulFileUrl($info->images);
         }
         if (in_array('circle', $cate)) {
-            if(isset($extra['circles'])){
+            if (isset($extra['circles'])) {
                 $info->circle_name = $extra['circles'][$info->circle_id] ?? '';
-            }else{
+            } else {
                 $info->circle_name = Db::table('circle')
                     ->where('id', '=', $info->circle_id)
                     ->value('name');

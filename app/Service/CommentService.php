@@ -53,7 +53,6 @@ class CommentService
         if (!$comment) {
             throw new LogicException('评论不存在');
         }
-        $comment->images = explode(',', $comment->images);
         $comment->image_urls = generateMulFileUrl($comment->images);
         return $comment;
     }
@@ -220,10 +219,10 @@ class CommentService
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
             ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0])
             ->where('comment.parent_id', '=', 0);
-        if(!empty($params['post_id'])){
+        if (!empty($params['post_id'])) {
             $query->where('comment.post_id', $params['post_id']);
         }
-        if(!empty($params['answer_id'])){
+        if (!empty($params['answer_id'])) {
             $query->where('comment.answer_id', $params['answer_id']);
         }
         $page = empty($params['page']) ? 1 : intval($params['page']);
@@ -233,7 +232,11 @@ class CommentService
             ->orderBy('comment.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
-        // TODO  转化
+        $comment_ids = array_column($data['items'], 'id');
+        $like_ids = $this->getUserCommentLikes($user_id, $comment_ids);
+        foreach ($data['items'] as $item) {
+            $this->objectTransformer($item, $cate, ['user_id' => $user_id, 'like_ids' => $like_ids]);
+        }
         return $data;
     }
 
@@ -243,7 +246,7 @@ class CommentService
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
             ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0])
             ->where('comment.parent_id', '=', 0);
-        if(!empty($params['comment_id'])){
+        if (!empty($params['comment_id'])) {
             $query->where('comment.parent_id', $params['comment_id']);
         }
         $page = empty($params['page']) ? 1 : intval($params['page']);
@@ -253,7 +256,11 @@ class CommentService
             ->orderBy('comment.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
-        // TODO  转化
+        $comment_ids = array_column($data['items'], 'id');
+        $like_ids = $this->getUserCommentLikes($user_id, $comment_ids);
+        foreach ($data['items'] as $item) {
+            $this->objectTransformer($item, $cate, ['user_id' => $user_id, 'like_ids' => $like_ids]);
+        }
         return $data;
     }
 
@@ -268,11 +275,26 @@ class CommentService
         if (!$comment) {
             throw new LogicException('评论不存在');
         }
-        $comment->images = explode(',', $comment->images);
-        $comment->image_urls = generateMulFileUrl($comment->images);
-        $comment->user_avatar = generateFileUrl($comment->user_avatar);
-        $comment->is_like = $this->checkIsLike($comment_id, $user_id);
+        $this->objectTransformer($comment, ['is_like'], ['user_id' => $user_id]);
         return $comment;
+    }
+
+    protected function objectTransformer(object $item, array $cate = [], array $params = [])
+    {
+        if (property_exists($item, 'user_avatar')) {
+            $item->user_avatar = getAvatar($item->user_avatar);
+        }
+        if (property_exists($item, 'images')) {
+            $item->images = empty($item->images) ? [] : explode(',', $item->images);
+            $item->image_urls = generateMulFileUrl($item->images);
+        }
+        if (in_array('is_like', $cate)) {
+            if(isset($params['like_ids'])){
+                $item->is_like = in_array($item->id, $params['like_ids']) ? 1 : 0;
+            }else{
+                $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
+            }
+        }
     }
 
     public function like(int $comment_id, int $user_id, int $status): bool
@@ -318,5 +340,18 @@ class CommentService
             ->where(['comment_id' => $comment_id, 'user_id' => $user_id])
             ->count();
         return $has > 0 ? 1 : 0;
+    }
+
+    public function getUserCommentLikes(int $user_id, array $comment_ids): array
+    {
+        if(empty($comment_ids) || empty($user_id)) {
+            return [];
+        }
+        return Db::table('comment_like')
+            ->where(['user_id' => $user_id])
+            ->whereIn('comment_id', $comment_ids)
+            ->pluck('comment_id')
+            ->toArray();
+
     }
 }

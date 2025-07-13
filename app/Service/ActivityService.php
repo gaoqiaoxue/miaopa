@@ -67,7 +67,7 @@ class ActivityService
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
             foreach ($data['items'] as $item) {
-                $item->cover_url = generateFileUrl($item->cover);
+                $this->objectTransformer($item);
             }
         }
         return $data;
@@ -243,7 +243,10 @@ LIMIT 7;';
             ->limit(3)
             ->get()
             ->toArray();
-        return $this->transformerList($items);
+        foreach ($items as $item) {
+            $this->objectTransformer($item);
+        }
+        return $items;
     }
 
     // 获取城市活动列表
@@ -275,7 +278,7 @@ LIMIT 7;';
                     SIN(RADIANS($userLat)) * SIN(RADIANS(lat))
                 ), 2
             )";
-            $query->selectRaw('id,cover,name,activity_type,active_status,fee,city,address,lat,lon,start_date,end_date,start_time,end_time,tags,create_time,'.$distanceFormula.' AS distance');
+            $query->selectRaw('id,cover,name,activity_type,active_status,fee,city,address,lat,lon,start_date,end_date,start_time,end_time,tags,create_time,' . $distanceFormula . ' AS distance');
         } else {
             $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time']);
         }
@@ -288,7 +291,9 @@ LIMIT 7;';
         }
         $data = $query->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
-        $data['items'] = $this->transformerList($data['items']);
+        foreach ($data['items'] as $item) {
+            $this->objectTransformer($item);
+        }
         return $data;
     }
 
@@ -305,6 +310,35 @@ LIMIT 7;';
         return $items;
     }
 
+    protected function objectTransformer(object $item, array $cate = [], array $params = [])
+    {
+        if (property_exists($item, 'tags')) {
+            $item->tags = json_decode($item->tags, true);
+        }
+        if (property_exists($item, 'cover')) {
+            $item->cover_url = generateFileUrl($item->cover);
+        }
+        if (property_exists($item, 'activity_type')) {
+            $item->activity_type_text = ActivityType::from($item->activity_type)->getMessage();
+        }
+        if (property_exists($item, 'active_status')) {
+            $item->active_status_text = ActiveStatus::from($item->active_status)->getMessage();
+        }
+        if (property_exists($item, 'bg')) {
+            $item->bg_url = generateFileUrl($item->bg);
+        }
+        if (property_exists($item, 'cover')) {
+            $item->cover_url = generateFileUrl($item->cover);
+        }
+        if (in_array('is_like', $cate)) {
+            if (isset($params['like_ids'])) {
+                $item->is_like = in_array($item->id, $params['like_ids']) ? 1 : 0;
+            } else {
+                $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
+            }
+        }
+    }
+
     // 活动详情
     public function detail(int $activity_id, int $user_id): object
     {
@@ -316,12 +350,7 @@ LIMIT 7;';
         if (empty($info)) {
             throw new ParametersException('活动不存在');
         }
-        $info->bg_url = generateFileUrl($info->bg);
-        $info->cover_url = generateFileUrl($info->cover);
-        $info->tags = json_decode($info->tags, true);
-        $info->activity_type_text = ActivityType::from($info->activity_type)->getMessage();
-        $info->active_status_text = ActiveStatus::from($info->active_status)->getMessage();
-        $info->is_like = $this->checkIsLike($activity_id, $user_id);
+        $this->objectTransformer($info, ['is_like'], ['user_id' => $user_id]);
         return $info;
     }
 
@@ -412,7 +441,9 @@ LIMIT 7;';
             ->orderBy('activity_user.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
-        $data['items'] = $this->transformerList($data['items']);
+        foreach ($data['items'] as $item) {
+            $this->objectTransformer($item);
+        }
         return $data;
     }
 
