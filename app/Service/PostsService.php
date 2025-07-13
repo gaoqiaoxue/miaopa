@@ -63,6 +63,10 @@ class PostsService
     {
         $query = Db::table('post')
             ->leftJoin('user', 'user.id', '=', 'post.user_id');
+        if(!empty($params['is_follow'])){
+            $query->leftJoin('user_follow', 'user_follow.follow_id', '=', 'post.user_id')
+                ->where('user_follow.user_id', '=', $params['user_id'] ?? 0);
+        }
         if (!empty($params['title'])) {
             $query->where('post.title', 'like', '%' . $params['title'] . '%');
         }
@@ -83,8 +87,8 @@ class PostsService
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
-            'post.audit_status', 'post.circle_id', 'post.media',
+        $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+            'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count','post.like_count',
             'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
             ->orderBy('post.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
@@ -251,4 +255,6 @@ class PostsService
             ->count();
         return $has > 0 ? 1 : 0;
     }
+
+
 }
