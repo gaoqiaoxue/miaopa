@@ -38,7 +38,7 @@ class SysUserRequest extends FormRequest
             'role_id' => 'required',
             'phonenumber' => 'required|regex:/^1[3-9]\d{9}$/',
             'status' => 'required|in:0,1',
-            'avatar' => 'integer',
+            'avatar' => 'string',
             'new_password' => 'required|alpha_dash:ascii|between:6,20',
         ];
     }
@@ -58,7 +58,7 @@ class SysUserRequest extends FormRequest
             'phonenumber.regex' => '手机号格式错误',
             'status.required' => '请填写状态',
             'status.in' => '状态错误',
-            'avatar.integer' => '头像格式错误',
+            'avatar.string' => '头像格式错误',
             'new_password.required' => '请填写新密码',
             'new_password.alpha_dash' => '密码应由字数字母下划线组成',
             'new_password.between' => '密码长度应在6-20字符',

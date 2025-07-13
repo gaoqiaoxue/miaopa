@@ -111,8 +111,19 @@ if (!function_exists('arrayToTree')) {
     }
 }
 
+if(!function_exists('getAvatar')){
+    function getAvatar(mixed $avatar): string
+    {
+        if (empty($avatar)) {
+            return \Hyperf\Support\env('FILE_HOST') . '/uploads/default_avatar.png';
+        }else {
+            return generateFileUrl($avatar);
+        }
+    }
+}
+
 if (!function_exists('generateFileUrl')) {
-    function generateFileUrl($url)
+    function generateFileUrl($url): string
     {
         if (empty($url)) {
             return '';
@@ -123,6 +134,27 @@ if (!function_exists('generateFileUrl')) {
         } else {
             return $url;
         }
+    }
+}
+
+if (!function_exists('generateMulFileUrl')) {
+    function generateMulFileUrl($urls): array
+    {
+        if (empty($urls)) {
+            $arr = [];
+        } elseif (is_array($urls)) {
+            $arr = $urls;
+        } else {
+            $arr = explode(',', $urls);
+        }
+        $result = [];
+        foreach ($arr as $url) {
+            $result[] = [
+                'path' => $url,
+                'url' => generateFileUrl($url),
+            ];
+        }
+        return $result;
     }
 }
 
@@ -162,7 +194,7 @@ if (!function_exists('getChineseWeekday')) {
     }
 }
 
-if(!function_exists('logGet')){
+if (!function_exists('logGet')) {
     function logGet(string $name = 'app', $group = 'default'): \Psr\Log\LoggerInterface
     {
         return \Hyperf\Context\ApplicationContext::getContainer()

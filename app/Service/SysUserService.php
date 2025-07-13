@@ -13,9 +13,6 @@ class SysUserService
     #[Inject]
     protected AuthTokenInterface $authToken;
 
-    #[Inject]
-    protected FileService $fileService;
-
     public function login(array $data): array
     {
         $user = Db::table('sys_user')->where(['user_name' => $data['user_name']])->first();
@@ -37,7 +34,7 @@ class SysUserService
             'user_name' => $user->user_name,
             'nick_name' => $user->nick_name,
             'avatar' => $user->avatar,
-            'avatar_url' => $this->fileService->getAvatar($user->avatar),
+            'avatar_url' => getAvatar($user->avatar),
             'role_id' => $role->role_id,
             'role_name' => $role->role_name,
         ];
@@ -104,7 +101,7 @@ class SysUserService
         if (!$user) {
             throw new LogicException('用户不存在');
         }
-        $user->avatar_url = $this->fileService->getAvatar($user->avatar);
+        $user->avatar_url = getAvatar($user->avatar);
         return $user;
     }
 
@@ -124,7 +121,7 @@ class SysUserService
                 'create_time' => date('Y-m-d H:i:s'),
                 'create_by' => $data['create_by'],
                 'status' => AbleStatus::ENABLE,
-                'avatar' => $data['avatar'] ?? 0
+                'avatar' => $data['avatar'] ?? ''
             ]);
             Db::table('sys_user_role')->insert(['user_id' => $user_id, 'role_id' => $data['role_id']]);
             Db::commit();

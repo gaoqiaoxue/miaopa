@@ -21,9 +21,6 @@ class ReportService
     #[Inject]
     protected CommentService $commentService;
 
-    #[Inject]
-    protected FileService $fileService;
-
     public function getAuditList(array $params = []): array
     {
         $query = Db::table('report')
@@ -67,15 +64,7 @@ class ReportService
             throw new LogicException('举报信息不存在');
         }
         $info->report_reason = ReportReason::from($info->report_reason)->getMessage();
-
-        $images = [];
-        if (!empty($info->images)) {
-            $images = explode(',', $info->images);
-            $images = $this->fileService->getFileInfoByIds($images);
-        }
-        $info->images = array_values($images);
-
-
+        $info->images = generateMulFileUrl($info->images);
         $content = null;
         if ($info->report_type == ReportType::POST->value) {
             $content = $this->postsService->getInfo($info->content_id);

@@ -13,9 +13,6 @@ class UserLoginService
     #[Inject]
     protected AuthTokenInterface $authToken;
 
-    #[Inject]
-    protected FileService $fileService;
-
     public function login(array $data): array
     {
         $user = Db::table('user')->where(['username' => $data['username']])->first();
@@ -73,7 +70,7 @@ class UserLoginService
             'username' => $user->username,
             'nickname' => $user->nickname,
             'avatar' => $user->avatar,
-            'avatar_url' => $this->fileService->getAvatar($user->avatar),
+            'avatar_url' => getAvatar($user->avatar),
         ];
         $token = $this->authToken->createToken($user_data);
         Db::table('user')->where(['id' => $user->id])->update([

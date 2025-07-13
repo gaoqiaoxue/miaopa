@@ -7,9 +7,6 @@ use Hyperf\Di\Annotation\Inject;
 
 class UserFollowService
 {
-    #[Inject]
-    protected FileService $fileService;
-
     public function follow(int $user_id, int $follow_id, int $status): bool
     {
         $has = Db::table('user_follow')
@@ -62,7 +59,7 @@ class UserFollowService
                 ->toArray();
         }
         foreach ($list['items'] as $item) {
-            $item->avatar_url = $this->fileService->getAvatar($item->avatar);
+            $item->avatar_url = getAvatar($item->avatar);
             $item->is_self = $params['current_user_id'] == $item->id ? 1 : 0;
             if ($params['current_user_id'] == $params['user_id']) {
                 $item->is_follow = 1;
@@ -95,7 +92,7 @@ class UserFollowService
                 ->toArray();
         }
         foreach ($list['items'] as $item) {
-            $item->avatar_url = $this->fileService->getAvatar($item->avatar);
+            $item->avatar_url = getAvatar($item->avatar);
             $item->is_self = $params['current_user_id'] == $item->id ? 1 : 0;
             $item->is_follow = in_array($item->id, $follow_ids) ? 1 : 0;
         }

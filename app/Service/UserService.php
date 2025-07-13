@@ -11,9 +11,6 @@ use Hyperf\Di\Annotation\Inject;
 class UserService
 {
 
-    #[Inject]
-    protected FileService $fileService;
-
     public function getList(array $params): array
     {
         $query = Db::table('user');
@@ -48,7 +45,7 @@ class UserService
         if (!$user) {
             throw new LogicException('用户不存在');
         }
-        $user->avatar_url = $this->fileService->getAvatar($user->avatar);
+        $user->avatar_url = getAvatar($user->avatar);
         $user->created_days = $this->getCreatedDays($user->create_time);
         // TODO 获取声望值
         $user->prestige = 0;

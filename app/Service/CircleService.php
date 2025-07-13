@@ -9,13 +9,9 @@ use App\Constants\PostType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
-use Hyperf\Di\Annotation\Inject;
 
 class CircleService
 {
-    #[Inject]
-    protected FileService $fileService;
-
     public function getSelect()
     {
         return Db::table('circle')
@@ -47,10 +43,8 @@ class CircleService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
-            $covers = array_column($data['items'], 'cover');
-            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($data['items'] as $item) {
-                $item->cover_url = $covers[$item->cover] ?? '';
+                $item->cover_url = generateFileUrl($item->cover);
             }
         }
         return $data;
@@ -67,8 +61,8 @@ class CircleService
         if (!$circle) {
             throw new ParametersException('圈子不存在');
         }
-        $circle->bg_url = $this->fileService->getFilePathById($circle->bg);
-        $circle->cover_url = $this->fileService->getFilePathById($circle->cover);
+        $circle->bg_url = generateFileUrl($circle->bg);
+        $circle->cover_url = generateFileUrl($circle->cover);
         $circle->relations = $this->getRelations($circle->relation_type, json_decode($circle->relation_ids, true));
 
         $post_counts = Db::table('post')
@@ -205,10 +199,8 @@ class CircleService
             $circles = array_merge($circles, $recom_circles);
         }
         if (!empty($circles)) {
-            $covers = array_column($circles, 'cover');
-            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($circles as $circle) {
-                $circle->cover_url = $covers[$circle->cover] ?? '';
+                $circle->cover_url = generateFileUrl($circle->cover);
             }
         }
         return $circles;
@@ -225,10 +217,8 @@ class CircleService
         }
         $relations = $this->getRelations($circle->relation_type, json_decode($circle->relation_ids, true));
         if (!empty($relations)) {
-            $covers = array_column($relations, 'cover');
-            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($relations as $relation) {
-                $relation->cover_url = $covers[$relation->cover] ?? '';
+                $relation->cover_url = generateFileUrl($relation->cover);
             }
         }
         return $relations;
@@ -260,10 +250,8 @@ class CircleService
             CircleType::CARTOON->name => [],
             CircleType::GAME->name => []
         ];
-        $covers = array_column($all, 'cover');
-        $covers = $this->fileService->getFilepathByIds($covers);
         foreach ($all as $circle) {
-            $circle->cover_url = $covers[$circle->cover] ?? '';
+            $circle->cover_url = generateFileUrl($circle->cover);
             if (in_array($circle->id, $follow_ids)) {
                 $result['follow'][] = $circle;
             } elseif ($circle->is_hot) {
@@ -287,8 +275,8 @@ class CircleService
         if (!$circle) {
             throw new ParametersException('圈子不存在');
         }
-        $circle->bg_url = $this->fileService->getFilePathById($circle->bg);
-        $circle->cover_url = $this->fileService->getFilePathById($circle->cover);
+        $circle->bg_url = generateFileUrl($circle->bg);
+        $circle->cover_url = generateFileUrl($circle->cover);
         $circle->follow_num = Db::table('circle_follow')
             ->where('circle_id', '=', $circle_id)
             ->count();

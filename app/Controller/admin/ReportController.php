@@ -52,7 +52,6 @@ class ReportController extends AbstractController
         $user_id = $this->request->getAttribute('user_id');
         $this->service->reject($data['report_id'],$user_id,$data['reject_reason']);
         return returnSuccess();
-
     }
 
 }

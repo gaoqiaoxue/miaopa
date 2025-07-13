@@ -35,8 +35,8 @@ class VirtualRequest extends FormRequest
             'exchange_amount' => 'required|integer',
             'valid_days' => 'required|integer',
             'quantity' => 'required|integer',
-            'image' => 'required|integer',
-            'avatar' => 'integer',
+            'image' => 'required|string',
+            'avatar' => 'string',
             'weight' => 'integer',
 //            'status' => 'in:0,1',
         ];
@@ -60,9 +60,9 @@ class VirtualRequest extends FormRequest
             'quantity.required' => '数量必填',
             'quantity.integer' => '数量必须为整数',
             'image.required' => '图标必填',
-            'image.integer' => '图标必须为整数',
+            'image.string' => '图标必须为字符串',
             'avatar.required' => '头像必填',
-            'avatar.integer' => '头像必须为整数',
+            'avatar.string' => '头像必须为字符串',
             'weight.integer' => '权重必须为整数',
             'status.in' => '状态必须为整数',
         ];

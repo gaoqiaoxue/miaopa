@@ -11,9 +11,6 @@ use Hyperf\Di\Annotation\Inject;
 class VirtualService
 {
     #[Inject]
-    protected FileService $fileService;
-
-    #[Inject]
     protected CreditService $creditService;
 
     public function getList(array $params): array
@@ -39,10 +36,8 @@ class VirtualService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
-            $images = array_column($data['items'], 'image');
-            $images = $this->fileService->getFilepathByIds($images);
             foreach ($data['items'] as $item) {
-                $item->image_url = $images[$item->image] ?? '';
+                $item->image_url = generateFileUrl($item->image);
             }
         }
         return $data;
@@ -57,8 +52,8 @@ class VirtualService
         if (!$virtual) {
             throw new LogicException('虚拟商品不存在');
         }
-        $virtual->image_url = $this->fileService->getFilePathById((int)$virtual->image);
-        $virtual->avatar_url = $this->fileService->getFilePathById((int)$virtual->avatar);
+        $virtual->image_url = generateFileUrl($virtual->image);
+        $virtual->avatar_url = generateFileUrl($virtual->avatar);
         return $virtual;
     }
 
@@ -98,7 +93,7 @@ class VirtualService
             'valid_days' => $data['valid_days'],
             'quantity' => $data['quantity'],
             'image' => $data['image'],
-            'avatar' => $data['avatar'] ?? 0,
+            'avatar' => $data['avatar'] ?? '',
             'update_time' => date('Y-m-d H:i:s')
         ];
         if ($is_add) {
@@ -131,8 +126,8 @@ class VirtualService
             'medal' => [],
         ];
         foreach ($list as $item) {
-            $item->image_url = $this->fileService->getFilePathById((int)$item->image);
-            $item->avatar_url = $this->fileService->getFilePathById((int)$item->avatar);
+            $item->image_url = generateFileUrl($item->image);
+            $item->avatar_url = generateFileUrl($item->avatar);
             if ($item->item_type == VirtualType::FIGURE->value) {
                 $result['figure'] = $item;
             } elseif ($item->item_type == VirtualType::MEDAL->value) {
@@ -145,8 +140,8 @@ class VirtualService
                 ->select(['id as item_id', 'name', 'item_type', 'image', 'avatar', 'valid_days'])
                 ->first();
             if (!empty($figure)) {
-                $figure->image_url = $this->fileService->getFilePathById((int)$figure->image);
-                $figure->avatar_url = $this->fileService->getFilePathById((int)$figure->avatar);
+                $figure->image_url = generateFileUrl($figure->image);
+                $figure->avatar_url = generateFileUrl($figure->avatar);
                 $result['figure'] = $figure;
             }
         }
@@ -228,12 +223,9 @@ class VirtualService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
-            $images = array_column($data['items'], 'image');
-            $avatars = array_column($data['items'], 'avatar');
-            $images = $this->fileService->getFilepathByIds($images);
             foreach ($data['items'] as $item) {
-                $item->image_url = $images[$item->image] ?? '';
-                $item->avatar_url = $avatars[$item->avatar] ?? '';
+                $item->image_url = generateFileUrl($item->image);
+                $item->avatar_url = generateFileUrl($item->avatar);
                 $item->valid_time = date('Y-m-d', $item->valid_time);
             }
         }

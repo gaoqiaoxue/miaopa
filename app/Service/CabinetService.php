@@ -6,12 +6,9 @@ use App\Constants\CabinetType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
-use PhpCsFixer\DocBlock\Tag;
 
 class CabinetService
 {
-    #[Inject]
-    protected FileService $fileService;
 
     public function getList(array $params): array
     {
@@ -29,10 +26,8 @@ class CabinetService
             ->orderBy('create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
-        $covers = array_column($list['items'], 'cover');
-        $covers = $this->fileService->getFilepathByIds($covers);
-        $list['items'] = array_map(function ($item) use ($covers) {
-            $item->cover = $covers[$item->cover];
+        $list['items'] = array_map(function ($item) {
+            $item->cover = generateFileUrl($item->cover);
             return $item;
         }, $list['items']);
         return $list;
@@ -48,7 +43,7 @@ class CabinetService
             throw new LogicException('次元柜不存在');
         }
         $info->cabinet_type_name = CabinetType::from($info->cabinet_type)->name;
-        $info->cover_url = $this->fileService->getFilepathById($info->cover);
+        $info->cover_url = generateFileUrl($info->cover);
         return $info;
     }
 
@@ -103,10 +98,8 @@ class CabinetService
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
         if (!empty($list['items'])) {
-            $covers = array_column($list['items'], 'cover');
-            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($list['items'] as $item) {
-                $item->cover = $covers[$item->cover] ?? '';
+                $item->cover_url = generateFileUrl($item->cover);
             }
         }
         return $list;
@@ -121,7 +114,7 @@ class CabinetService
         if (empty($info)) {
             throw new LogicException('物品不存在');
         }
-        $images = $this->fileService->getFileInfoByIds(explode(',', $info->images));
+        $images = generateMulFileUrl($info->images);
         $info->images = array_values($images);
         return $info;
     }

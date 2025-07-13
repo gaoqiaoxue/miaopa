@@ -13,9 +13,6 @@ use Hyperf\Di\Annotation\Inject;
 class CommentService
 {
     #[Inject]
-    protected FileService $fileService;
-
-    #[Inject]
     protected AuditService $auditService;
 
     public function getList(array $params): array
@@ -56,12 +53,8 @@ class CommentService
         if (!$comment) {
             throw new LogicException('评论不存在');
         }
-        if (!empty($comment->images)) {
-            $images = explode(',', $comment->images);
-            $comment->image_urls = array_values($this->fileService->getFilepathByIds($images));
-        } else {
-            $comment->image_urls = [];
-        }
+        $comment->images = explode(',', $comment->images);
+        $comment->image_urls = generateMulFileUrl($comment->images);
         return $comment;
     }
 
@@ -275,13 +268,9 @@ class CommentService
         if (!$comment) {
             throw new LogicException('评论不存在');
         }
-        if (!empty($comment->images)) {
-            $images = explode(',', $comment->images);
-            $comment->image_urls = array_values($this->fileService->getFilepathByIds($images));
-        } else {
-            $comment->image_urls = [];
-        }
-        $comment->user_avatar = $this->fileService->getFilepathById($comment->user_avatar);
+        $comment->images = explode(',', $comment->images);
+        $comment->image_urls = generateMulFileUrl($comment->images);
+        $comment->user_avatar = generateFileUrl($comment->user_avatar);
         $comment->is_like = $this->checkIsLike($comment_id, $user_id);
         return $comment;
     }

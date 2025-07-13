@@ -9,17 +9,12 @@ use App\Constants\ActivityUserStatus;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Carbon\Carbon;
-use http\Params;
 use Hyperf\Cache\Annotation\Cacheable;
-use Hyperf\Collection\Arr;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
 class ActivityService
 {
-    #[Inject]
-    protected FileService $fileService;
-
     #[Inject]
     protected UserViewRecordService $viewService;
 
@@ -71,10 +66,8 @@ class ActivityService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
-            $covers = array_column($data['items'], 'cover');
-            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($data['items'] as $item) {
-                $item->cover_url = $covers[$item->cover] ?? '';
+                $item->cover_url = generateFileUrl($item->cover);
             }
         }
         return $data;
@@ -91,8 +84,8 @@ class ActivityService
         if (empty($info)) {
             throw new ParametersException('活动不存在');
         }
-        $info->bg_url = $this->fileService->getFilePathById($info->bg);
-        $info->cover_url = $this->fileService->getFilePathById($info->cover);
+        $info->bg_url = generateFileUrl($info->bg);
+        $info->cover_url = generateFileUrl($info->cover);
         $info->tags = json_decode($info->tags, true);
         $info->creater_name = Db::table('sys_user')
             ->where('user_id', '=', $info->create_by)
@@ -130,8 +123,8 @@ class ActivityService
             'city' => RegionService::getRegionNameById($data['city_id']),
             'city_id' => $data['city_id'],
             'address' => $data['address'],
-            'lat' => $data['lat'] ?? '',
-            'lon' => $data['lon'] ?? '',
+            'lat' => $data['lat'] ?? 0,
+            'lon' => $data['lon'] ?? 0,
             'fee' => $data['fee'],
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'],
@@ -303,11 +296,9 @@ LIMIT 7;';
     protected function transformerList(array $items): array
     {
         if (!empty($items)) {
-            $covers = array_column($items, 'cover');
-            $covers = $this->fileService->getFilepathByIds($covers);
             foreach ($items as $item) {
                 $item->tags = json_decode($item->tags, true);
-                $item->cover_url = $covers[$item->cover] ?? '';
+                $item->cover_url = generateFileUrl($item->cover);
                 $item->activity_type_text = ActivityType::from($item->activity_type)->getMessage();
             }
         }
@@ -325,8 +316,8 @@ LIMIT 7;';
         if (empty($info)) {
             throw new ParametersException('活动不存在');
         }
-        $info->bg_url = $this->fileService->getFilePathById($info->bg);
-        $info->cover_url = $this->fileService->getFilePathById($info->cover);
+        $info->bg_url = generateFileUrl($info->bg);
+        $info->cover_url = generateFileUrl($info->cover);
         $info->tags = json_decode($info->tags, true);
         $info->activity_type_text = ActivityType::from($info->activity_type)->getMessage();
         $info->active_status_text = ActiveStatus::from($info->active_status)->getMessage();

@@ -13,9 +13,6 @@ use Hyperf\Di\Annotation\Inject;
 class PostsService
 {
     #[Inject]
-    protected FileService $fileService;
-
-    #[Inject]
     protected AuditService $auditService;
 
     public function getList(array $params): array
@@ -93,10 +90,8 @@ class PostsService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
-            $covers = array_column($data['items'], 'cover');
-            $covers = $this->fileService->getFileInfoByIds($covers);
             foreach ($data['items'] as $key => $item) {
-                $item->cover = $covers[$item->cover] ?? [];
+                $item->cover_url = generateFileUrl($item->cover);
             }
         }
         return $data;
@@ -116,17 +111,12 @@ class PostsService
         if (!$post) {
             throw new LogicException('帖子不存在');
         }
-        if (!empty($post->media)) {
-            $media = explode(',', $post->media);
-            $post->media_urls = array_values($this->fileService->getFileInfoByIds($media));
-        } else {
-            $post->media_urls = [];
-        }
+        $post->media_urls = generateMulFileUrl($post->media);
         if (in_array('user_avatar', $cate)) {
-            $post->user_avatar = $this->fileService->getAvatar($post->user_avatar);
+            $post->user_avatar = getAvatar($post->user_avatar);
         }
         if (in_array('circle_cover', $cate)) {
-            $post->circle_cover = $this->fileService->getFilePathById($post->circle_cover);
+            $post->circle_cover = generateFileUrl($post->circle_cover);
         }
         return $post;
     }

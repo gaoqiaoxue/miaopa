@@ -180,14 +180,4 @@ class FileService
         return [];
     }
 
-    public function getAvatar(mixed $avatar): string
-    {
-        if (empty($avatar)) {
-            return \Hyperf\Support\env('FILE_HOST') . '/uploads/default_avatar.png';
-        } elseif (is_numeric($avatar)) {
-            return $this->getFilePathById($avatar);
-        } else {
-            return generateFileUrl($avatar);
-        }
-    }
 }

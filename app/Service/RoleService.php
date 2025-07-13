@@ -12,9 +12,6 @@ use Hyperf\Di\Annotation\Inject;
 class RoleService
 {
     #[Inject]
-    protected FileService $fileService;
-
-    #[Inject]
     protected AuditService $auditService;
 
     public function getList(array $params): array
@@ -52,8 +49,6 @@ class RoleService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($list);
         if (!empty($data['items'])) {
-            $covers = array_column($data['items'], 'cover');
-            $covers = $this->fileService->getFilepathByIds($covers);
             $circle_ids = array_column($data['items'], 'circle_id');
             $cirlces = Db::table('circle')
                 ->whereIn('id', $circle_ids)
@@ -62,7 +57,7 @@ class RoleService
             $role_types = RoleType::getMaps();
             foreach ($data['items'] as $item) {
                 $item->role_type_name = $role_types[$item->role_type] ?? '';
-                $item->cover_url = $covers[$item->cover] ?? '';
+                $item->cover_url = generateFileUrl($item->cover);
                 $item->circle_name = $cirlces[$item->circle_id] ?? '';
             }
         }
@@ -85,15 +80,10 @@ class RoleService
     protected function transformerObject(object $info, array $cate = [], array $extra = []): object
     {
         if (in_array('cover', $cate)) {
-            if (isset($extra['covers'])) {
-                $info->cover_url = $extra['covers'][$info->cover] ?? '';
-            } else {
-                $info->cover_url = $this->fileService->getFilePathById($info->cover);
-            }
+            $info->cover_url = generateFileUrl($info->cover);
         }
         if (in_array('images', $cate)) {
-            $images = explode(',', $info->images);
-            $info->images = array_values($this->fileService->getFileInfoByIds($images));
+            $info->images = generateMulFileUrl($info->images);
         }
         if (in_array('circle', $cate)) {
             if(isset($extra['circles'])){
