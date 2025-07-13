@@ -133,6 +133,7 @@ class CommentService
         return true;
     }
 
+    // 评论
     public function comment(int $user_id, int $post_id, string $content, array $images = [])
     {
         $post = Db::table('post')->where(['id' => $post_id])->first(['id', 'post_type']);
@@ -161,6 +162,7 @@ class CommentService
         return true;
     }
 
+    // 回复
     public function reply(int $user_id, int $parent_id, string $content, array $images = [])
     {
         $comment = Db::table('comment')
@@ -221,12 +223,45 @@ class CommentService
 
     public function getCommentList(array $params, int $user_id, array $cate = []): array
     {
-        // TODO
+        $query = Db::table('comment')
+            ->leftJoin('user', 'user.id', '=', 'comment.user_id')
+            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0])
+            ->where('comment.parent_id', '=', 0);
+        if(!empty($params['post_id'])){
+            $query->where('comment.post_id', $params['post_id']);
+        }
+        if(!empty($params['answer_id'])){
+            $query->where('comment.answer_id', $params['answer_id']);
+        }
+        $page = empty($params['page']) ? 1 : intval($params['page']);
+        $page_size = empty($params['page_size']) ? 10 : intval($params['page_size']);
+        $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
+            'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
+            ->orderBy('comment.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        // TODO  转化
+        return $data;
     }
 
     public function getReplyList(array $params, int $user_id, array $cate = []): array
     {
-        // TODO
+        $query = Db::table('comment')
+            ->leftJoin('user', 'user.id', '=', 'comment.user_id')
+            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0])
+            ->where('comment.parent_id', '=', 0);
+        if(!empty($params['comment_id'])){
+            $query->where('comment.parent_id', $params['comment_id']);
+        }
+        $page = empty($params['page']) ? 1 : intval($params['page']);
+        $page_size = empty($params['page_size']) ? 10 : intval($params['page_size']);
+        $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
+            'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
+            ->orderBy('comment.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        // TODO  转化
+        return $data;
     }
 
     public function getCommentDetail(int $comment_id, int $user_id): object
@@ -246,6 +281,7 @@ class CommentService
         } else {
             $comment->image_urls = [];
         }
+        $comment->user_avatar = $this->fileService->getFilepathById($comment->user_avatar);
         $comment->is_like = $this->checkIsLike($comment_id, $user_id);
         return $comment;
     }

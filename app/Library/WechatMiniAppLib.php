@@ -55,4 +55,56 @@ class WechatMiniAppLib
             throw new ParametersException($e->getMessage());
         }
     }
+
+    // 文本内容安全监测
+    public function msgSecCheck($content,$openid)
+    {
+        try {
+            $res = $this->app->getClient()->postJson('wxa/msg_sec_check', [
+                'content' => $content,
+                'openid' => $openid,
+                'version' => '2',
+                'scene' => '2' // 1 资料；2 评论；3 论坛；4 社交日志
+            ]);
+            logGet('msgSecCheck','wxmini')->debug(json_encode([
+                'content' => $content,
+                'openid' => $openid,
+                'res' => $res
+            ]));
+            if(isset($res['result']['suggest']) && $res['result']['suggest'] == 'pass'){
+                return false; //无风险
+            }
+            return true; // 有风险
+        } catch (\Throwable $e) {
+            logGet('msgSecCheck','wxmini')->debug($e->getMessage());
+            return false;
+        }
+    }
+
+    // 多媒体内容安全识别
+    public function mediaCheckAsync($mediaUrl,$openid,$mediaType = 2)
+    {
+        try {
+            $result = $this->app->getClient()->postJson('wxa/media_check_async', [
+                'media_url' => $mediaUrl,
+                'media_type' => $mediaType, // 1:音频;2:图片
+                'version' => '2',
+                'scene' => '1', // 1 资料；2 评论；3 论坛；4 社交日志
+                'openid' => $openid
+            ]);
+            if($result['errcode'] == 0) {
+                return $result['trace_id'];
+            }else{
+                logGet('mediaCheck','wxmini')->debug(json_encode([
+                    'media_url' => $mediaUrl,
+                    'media_type' => $mediaType, // 1:音频;2:图片
+                    'res' => $result
+                ]));
+                throw new ParametersException($result['errmsg'] ?? '内容安全校验失败');
+            }
+        } catch (\Throwable $e) {
+            logGet('mediaCheck','wxmini')->debug($e->getMessage());
+            throw new ParametersException($e->getMessage());
+        }
+    }
 }

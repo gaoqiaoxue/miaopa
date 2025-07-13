@@ -11,17 +11,17 @@ use App\Service\ConfigService;
 use Hyperf\DbConnection\Db;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
+use Hyperf\Logger\LoggerFactory;
 
 #[AutoController]
 #[Middleware(ApiMiddleware::class)]
 class IndexController extends AbstractController
 {
     public function index(MapWebInterface $service){
-
-//        $user_data = $this->request->getAttribute("user_data");
+        logGet('info','wxmini')->debug('serre');
         return [
-//            'data' => $user_data,
-            'value' => $service->getLatLonByAddress('郑州市高新区正弘汇')
+            'data' => $this->request->all()
+//            'value' => $service->getLatLonByAddress('郑州市高新区正弘汇')
         ];
     }
 

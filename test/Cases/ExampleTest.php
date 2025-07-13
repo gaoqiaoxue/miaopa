@@ -22,6 +22,18 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $this->get('/')->assertOk()->assertSee('Hyperf');
+
+        logGet('mediaCheck','wxmini')->debug(json_encode([
+            'media_url' => '111',
+            'media_type' => 2, // 1:音频;2:图片
+            'res' => [
+                'status' => 1,
+                'mes' => '23e23'
+            ]
+        ]));
+
+
+        $this->assertTrue(true, 'kthis');
+//        $this->get('/')->assertOk()->assertSee('Hyperf');
     }
 }

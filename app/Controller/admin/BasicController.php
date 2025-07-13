@@ -41,6 +41,7 @@ class BasicController extends AbstractController
             'audit_status' => AuditStatus::getMaps(),
             'report_type' => ReportType::getMaps(),
             'report_reason' => ReportReason::getMaps(),
+            'file_url' => \Hyperf\Support\env('FILE_HOST')
         ]);
     }
 

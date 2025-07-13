@@ -1,7 +1,5 @@
 <?php
 
-use Hyperf\Contract\LengthAwarePaginatorInterface;
-
 if (!function_exists("returnSuccess")) {
     function returnSuccess($data = [], $msg = 'success', $code = 200)
     {
@@ -41,7 +39,7 @@ if (!function_exists("checkPassword")) {
 }
 
 if (!function_exists('paginateTransformer')) {
-    function paginateTransformer(LengthAwarePaginatorInterface $data): array
+    function paginateTransformer(\Hyperf\Contract\LengthAwarePaginatorInterface $data): array
     {
         return [
             'items' => $data->items(),
@@ -161,5 +159,14 @@ if (!function_exists('getChineseWeekday')) {
             7 => '周日'
         ];
         return $weekdayMap[$weekday];
+    }
+}
+
+if(!function_exists('logGet')){
+    function logGet(string $name = 'app', $group = 'default'): \Psr\Log\LoggerInterface
+    {
+        return \Hyperf\Context\ApplicationContext::getContainer()
+            ->get(\Hyperf\Logger\LoggerFactory::class)
+            ->get($name, $group);
     }
 }

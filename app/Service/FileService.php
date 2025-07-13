@@ -35,7 +35,11 @@ class FileService
         // 检查文件是否已存在
         $existFile = Db::table('sys_upload')->where('md5', $fileMd5)->first();
         if ($existFile) {
-            return (array)$existFile;
+            return [
+                'upload_id' => $existFile->upload_id,
+                'path' => $existFile->url,
+                'url' => generateFileUrl($existFile->url),
+            ];
         }
 
         // 文件类型校验，只允许图片和视频上传
@@ -87,6 +91,7 @@ class FileService
 
         return [
             'upload_id' => $uploadId,
+            'path' => $storagePath,
             'url' => generateFileUrl($storagePath),
         ];
     }
