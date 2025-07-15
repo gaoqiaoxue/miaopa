@@ -22,7 +22,7 @@ class ActivityController extends AbstractController
     {
         $city_id = $this->request->input('city_id', 0);
         return returnSuccess([
-            'hot' => $this->service->getHot((int)$city_id),
+            'hot' => $this->service->getApiSelect(['city_id' => $city_id], 3),
             'dates' => $this->service->getDates((int)$city_id),
         ]);
     }
@@ -40,7 +40,7 @@ class ActivityController extends AbstractController
         $activity_id = $request->input('activity_id');
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
-        $info = $this->service->detail((int)$activity_id, (int)$user_id);
+        $info = $this->service->getInfo((int)$activity_id, ['is_like'], ['user_id' => $user_id]);
         return returnSuccess($info);
     }
 

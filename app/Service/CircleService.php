@@ -12,68 +12,93 @@ use Hyperf\DbConnection\Db;
 
 class CircleService
 {
-    public function getSelect()
+    public function getSelect($params = [], $field = ['id', 'name'], $limit = 0)
     {
-        return Db::table('circle')
-            ->select(['id', 'name'])
+        $query = $this->buildQuery($params);
+        $query->select($field)
             ->orderBy('weight', 'desc')
-            ->orderBy('id', 'desc')
-            ->get();
+            ->orderBy('id', 'desc');
+        if($limit){
+            $list = $query->limit($limit)->get()->toArray();
+        }else{
+            $list = $query->get()->toArray();
+        }
+        foreach ($list as $item) {
+            $this->objectTransformer($item,[],$params);
+        }
+        return $list;
     }
 
-    public function getList($params = [])
+    // 圈子列表
+    public function getList($params = [], $cate = [])
     {
-        $query = Db::table('circle');
-        if (!empty($params['name'])) {
-            $query->where('name', 'like', '%' . $params['name'] . '%');
-        }
-        if (!empty($params['circle_type'])) {
-            $query->where('circle_type', $params['circle_type']);
-        }
-        if (isset($params['status']) && in_array($params["status"], AbleStatus::getKeys())) {
-            $query->where('status', '=', $params['status']);
-        }
-        if (!empty($params['start_time']) && !empty($params['end_time'])) {
-            $query->whereBetween('create_time', [$params['start_time'], $params['end_time']]);
-        }
+        $query = $this->buildQuery($params);
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['id', 'cover', 'name', 'circle_type', 'status', 'follow_count', 'create_time'])
+            ->orderBy('is_hot', 'desc')
+            ->orderBy('weight', 'desc')
             ->orderBy('create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         if (!empty($data['items'])) {
+            if(in_array('is_follow',$cate)){
+                $ids = array_column($data['items'], 'id');
+                $follow_ids = Db::table('circle_follow')
+                    ->where(['user_id' => $params['user_id'] ?? 0])
+                    ->whereIn('circle_id', $ids)
+                    ->pluck('circle_id')
+                    ->toArray();
+                $params['follow_ids'] = $follow_ids;
+            }
             foreach ($data['items'] as $item) {
-                $item->cover_url = generateFileUrl($item->cover);
+                $this->objectTransformer($item, $cate, $params);
             }
         }
         return $data;
     }
 
-    public function getInfo(int $circle_id): object
+    protected function buildQuery($params)
+    {
+        $query = Db::table('circle');
+        if (isset($params['status']) && in_array($params["status"], AbleStatus::getKeys())) {
+            $query->where('status', '=', $params['status']);
+        }
+        if(!empty($params['relation_type'])){
+            $query->where('relation_type', '=', $params['relation_type']);
+        }
+        if(!empty($params['name'])){
+            $query->where('name', 'like', '%' . $params['name'] . '%');
+        }
+        if(!empty($params['is_follow'])){
+            $user_id = $params['user_id'] ?? 0;
+            $follow_ids = Db::table('circle_follow')
+                ->where(['user_id' => $user_id])
+                ->pluck('circle_id')
+                ->toArray();
+            $query->whereIn('id', $follow_ids);
+        }
+        if (!empty($params['circle_type'])) {
+            $query->where('circle_type', $params['circle_type']);
+        }
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
+            $query->whereBetween('create_time', [$params['start_time'], $params['end_time']]);
+        }
+        return $query;
+    }
+
+    public function getInfo(int $circle_id, array $cate = ['relations', 'post_count','creater'], array $params = []): object
     {
         if (empty($circle_id))
             throw new ParametersException('请传入圈子ID');
         $circle = Db::table('circle')
             ->where(['id' => $circle_id])
-            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'weight', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time'])
+            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'weight', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time','create_by','follow_count'])
             ->first();
         if (!$circle) {
             throw new ParametersException('圈子不存在');
         }
-        $circle->bg_url = generateFileUrl($circle->bg);
-        $circle->cover_url = generateFileUrl($circle->cover);
-        $circle->relations = $this->getRelations($circle->relation_type, json_decode($circle->relation_ids, true));
-
-        $post_counts = Db::table('post')
-            ->where('circle_id', $circle_id)
-            ->groupBy('post_type')
-            ->select(['post_type', Db::raw('count(*) as count')])
-            ->get()
-            ->toArray();
-        $post_counts = array_column($post_counts, 'count', 'post_type');
-        $circle->dynamic_post_count = $post_counts[PostType::DYNAMIC->value] ?? 0;
-        $circle->question_post_count = $post_counts[PostType::QA->value] ?? 0;
+        $this->objectTransformer($circle,$cate, $params);
         return $circle;
     }
 
@@ -168,6 +193,7 @@ class CircleService
         return $data;
     }
 
+    // 首页推荐圈子 关注优先
     public function getRecommendList(int $user_id = 0): array
     {
         $total_num = 8;
@@ -200,12 +226,13 @@ class CircleService
         }
         if (!empty($circles)) {
             foreach ($circles as $circle) {
-                $circle->cover_url = generateFileUrl($circle->cover);
+                $this->objectTransformer($circle);
             }
         }
         return $circles;
     }
 
+    // 圈子关联列表
     public function getRelationsById(int $circle_id): array
     {
         $circle = Db::table('circle')
@@ -224,7 +251,8 @@ class CircleService
         return $relations;
     }
 
-    public function getAllByType(int $user_id = 0, string $keyword = '')
+    // API 按分类分组 带搜索和关注
+    public function getAllByType(int $user_id = 0, string $keyword = '', int $limit = 0)
     {
         $query = Db::table('circle')
             ->where('status', '=', AbleStatus::ENABLE)
@@ -251,34 +279,17 @@ class CircleService
             CircleType::GAME->name => []
         ];
         foreach ($all as $circle) {
-            $circle->cover_url = generateFileUrl($circle->cover);
+            $this->objectTransformer($circle);
             if (in_array($circle->id, $follow_ids)) {
-                $result['follow'][] = $circle;
-            } elseif ($circle->is_hot) {
-                $result['hot'][] = $circle;
-            } else {
-                $type_name = CircleType::tryFrom($circle->circle_type)->name ?? '';
-                $result[$type_name][] = $circle;
+                (!$limit || count($result['follow']) < $limit) && $result['follow'][] = $circle;
             }
+            if ($circle->is_hot) {
+                (!$limit || count($result['hot']) < $limit) && $result['hot'][] = $circle;
+            }
+            $type_name = CircleType::tryFrom($circle->circle_type)->name ?? '';
+            (!$limit || count($result[$type_name]) < $limit) && $result[$type_name][] = $circle;
         }
         return $result;
-    }
-
-    public function detail(int $circle_id, int $user_id = 0): object
-    {
-        if (empty($circle_id))
-            throw new ParametersException('请传入圈子ID');
-        $circle = Db::table('circle')
-            ->where(['id' => $circle_id])
-            ->select(['id', 'bg', 'cover', 'name', 'circle_type', 'status', 'is_hot', 'relation_type', 'relation_ids', 'description', 'create_time', 'follow_count'])
-            ->first();
-        if (!$circle) {
-            throw new ParametersException('圈子不存在');
-        }
-        $circle->bg_url = generateFileUrl($circle->bg);
-        $circle->cover_url = generateFileUrl($circle->cover);
-        $circle->is_follow = $this->checkIsFollow($circle_id, $user_id);
-        return $circle;
     }
 
     public function follow(int $user_id, int $circle_id, int $status): bool
@@ -324,5 +335,41 @@ class CircleService
             ->where(['circle_id' => $circle_id, 'user_id' => $user_id])
             ->count();
         return $is_follow ? 1 : 0;
+    }
+
+    protected function objectTransformer(object $item, array $cate = [], array $params = [])
+    {
+        if (property_exists($item, 'cover')) {
+            $item->cover_url = generateFileUrl($item->cover);
+        }
+        if (property_exists($item, 'bg')) {
+            $item->bg_url = generateFileUrl($item->bg);
+        }
+        if (in_array('is_follow', $cate)) {
+            if (isset($params['follow_ids'])) {
+                $item->is_follow = in_array($item->id, $params['follow_ids']) ? 1 : 0;
+            } else {
+                $item->is_follow = $this->checkIsFollow($item->id, $params['user_id'] ?? 0);
+            }
+        }
+        if(in_array('relations', $cate)){
+            $item->relations = $this->getRelations($item->relation_type, json_decode($item->relation_ids, true));
+        }
+        if(in_array('post_count', $cate)){
+            $post_counts = Db::table('post')
+                ->where('circle_id', $item->id)
+                ->groupBy('post_type')
+                ->select(['post_type', Db::raw('count(*) as count')])
+                ->get()
+                ->toArray();
+            $post_counts = array_column($post_counts, 'count', 'post_type');
+            $item->dynamic_post_count = $post_counts[PostType::DYNAMIC->value] ?? 0;
+            $item->question_post_count = $post_counts[PostType::QA->value] ?? 0;
+        }
+        if(in_array('creater',$cate)){
+            $item->creater_name = Db::table('sys_user')
+                ->where('user_id', '=', $item->create_by)
+                ->value('nick_name');
+        }
     }
 }

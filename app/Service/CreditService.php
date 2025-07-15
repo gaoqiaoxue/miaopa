@@ -11,6 +11,9 @@ use Hyperf\Di\Annotation\Inject;
 
 class CreditService
 {
+    #[Inject]
+    protected ConfigService $configService;
+
     #[Cacheable(prefix: "user_credit", ttl: 3600)]
     public function getUserCredit(int $user_id)
     {
@@ -41,9 +44,6 @@ class CreditService
             ];
         }
     }
-
-    #[Inject]
-    protected ConfigService $configService;
 
     public function getCoin(int $user_id)
     {

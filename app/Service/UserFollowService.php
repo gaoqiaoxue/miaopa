@@ -15,17 +15,23 @@ class UserFollowService
         if ((empty($has) && $status == 0) || (!empty($has) && $status == 1)) {
             return true;
         }
+        Db::beginTransaction();
         if ($status == 1) {
             Db::table('user_follow')->insert([
                 'follow_id' => $follow_id,
                 'user_id' => $user_id,
                 'create_time' => date('Y-m-d H:i:s'),
             ]);
+            Db::table('user')->where('id', '=', $follow_id)->increment('fans_num');
+            Db::table('user')->where('id', '=', $user_id)->increment('follow_num');
         } else {
             Db::table('user_follow')
                 ->where(['follow_id' => $follow_id, 'user_id' => $user_id])
                 ->delete();
+            Db::table('user')->where('id', '=', $follow_id)->decrement('fans_num');
+            Db::table('user')->where('id', '=', $user_id)->decrement('follow_num');
         }
+        Db::commit();
         return true;
     }
 
@@ -37,6 +43,7 @@ class UserFollowService
         return $has > 0 ? 1 : 0;
     }
 
+    // 获取用户的关注列表
     public function getFollowList(array $params): array
     {
         $query = Db::table('user_follow')
@@ -70,6 +77,7 @@ class UserFollowService
         return $list;
     }
 
+    // 获取用户的粉丝列表
     public function getFansList(array $params): array
     {
         $query = Db::table('user_follow')
@@ -97,5 +105,18 @@ class UserFollowService
             $item->is_follow = in_array($item->id, $follow_ids) ? 1 : 0;
         }
         return $list;
+    }
+
+    // 获取用户在限定用户用的关注列表
+    public function getFollowIds(int $user_id, array $follow_ids):array
+    {
+        if(empty($user_id) || empty($follow_ids)){
+            return [];
+        }
+        return Db::table('user_follow')
+            ->where('user_id', $user_id)
+            ->whereIn('follow_id', $follow_ids)
+            ->pluck('follow_id')
+            ->toArray();
     }
 }

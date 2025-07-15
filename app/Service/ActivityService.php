@@ -62,6 +62,7 @@ class ActivityService
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['id', 'cover', 'name', 'activity_type', 'status', 'active_status', 'fee', 'city', 'address', 'start_date', 'end_date', 'create_time'])
+            ->orderBy('weight', 'desc')
             ->orderBy('create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
@@ -73,8 +74,88 @@ class ActivityService
         return $data;
     }
 
-    // 后台获取活动详情
-    public function getInfo(int $activity_id)
+    // 获取城市热门活动
+    public function getApiSelect(array $params = [], int $limit = 3): array
+    {
+        $query = Db::table('activity')
+            ->where('status', AbleStatus::ENABLE->value)
+            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value]);
+        if(!empty($params['city_id'])){
+            $query->where('city_id', $params['city_id']);
+        }
+        if(!empty($params['keyword'])){
+            $query->where('name', 'like', '%' . $params['keyword'] . '%');
+        }
+        if(!empty($limit)){
+            $query->limit($limit);
+        }
+        $items = $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time'])
+            ->orderBy('is_hot', 'desc')
+            ->orderBy('weight', 'desc')
+            ->orderBy('create_time', 'desc')
+            ->get()
+            ->toArray();
+        foreach ($items as $item) {
+            $this->objectTransformer($item);
+        }
+        return $items;
+    }
+
+    // 获取城市活动列表
+    public function getApiList(array $params)
+    {
+        $query = Db::table('activity')
+            ->where('status', AbleStatus::ENABLE->value)
+            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value]);
+        if (!empty($params['keyword'])) {
+            $query->where('name', 'like', '%' . $params['keyword'] . '%');
+        }
+        if (!empty($params['city_id'])) {
+            $query->where('city_id', $params['city_id']);
+        }
+        if (!empty($params['date'])) {
+            $start = Carbon::parse($params['date'])->startOfDay()->timestamp;
+            $end = $start + 86400;
+            $query->where('start', '<', $start)
+                ->where('end', '>', $end);
+        }
+        if (!empty($params['lat']) && !empty($params['lon'])) {
+            $userLat = (float)$params['lat'];
+            $userLon = (float)$params['lon'];
+            $earthRadius = 6371;
+            $distanceFormula = "ROUND(
+                $earthRadius * ACOS(
+                    COS(RADIANS($userLat)) * COS(RADIANS(lat)) * 
+                    COS(RADIANS(lon) - RADIANS($userLon)) + 
+                    SIN(RADIANS($userLat)) * SIN(RADIANS(lat))
+                ), 2
+            )";
+            $query->selectRaw('id,cover,name,activity_type,active_status,fee,city,address,lat,lon,start_date,end_date,start_time,end_time,tags,create_time,' . $distanceFormula . ' AS distance');
+        } else {
+            $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time']);
+        }
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+        $query->orderBy('weight', 'desc')
+            ->orderBy('create_time', 'desc');
+        if (!empty($params['lat']) && !empty($params['lon'])) {
+            $query->orderBy('distance', 'asc');
+        }
+        $data = $query->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        foreach ($data['items'] as $item) {
+            $this->objectTransformer($item);
+        }
+        return $data;
+    }
+
+    protected function buildQuery($params = [])
+    {
+
+    }
+
+    // 活动详情
+    public function getInfo(int $activity_id, array $cate = [], array $params = [])
     {
         $info = Db::table('activity')
             ->where(['id' => $activity_id])
@@ -84,12 +165,7 @@ class ActivityService
         if (empty($info)) {
             throw new ParametersException('活动不存在');
         }
-        $info->bg_url = generateFileUrl($info->bg);
-        $info->cover_url = generateFileUrl($info->cover);
-        $info->tags = json_decode($info->tags, true);
-        $info->creater_name = Db::table('sys_user')
-            ->where('user_id', '=', $info->create_by)
-            ->value('nick_name');
+        $this->objectTransformer($info, $cate, $params);
         return $info;
     }
 
@@ -172,7 +248,7 @@ class ActivityService
     {
         $query = Db::table('activity_user')
             ->leftJoin('user', 'user.id', '=', 'activity_user.user_id')
-            ->where('activity_id', $params['activity_id'])
+            ->where('activity_user.activity_id', $params['activity_id'])
             ->where('activity_user.status', ActivityUserStatus::JOINED);
         if (!empty($params['user_id'])) {
             $query->where('activity_user.user_id', $params['user_id']);
@@ -194,7 +270,6 @@ class ActivityService
         $data = paginateTransformer($data);
         return $data;
     }
-
 
     // 获取城市最近有活动的日期
     public function getDates(int $city_id)
@@ -229,87 +304,6 @@ LIMIT 7;';
         return $list;
     }
 
-    // 获取城市热门活动
-    public function getHot(int $city_id): array
-    {
-        $items = Db::table('activity')
-            ->where('status', AbleStatus::ENABLE->value)
-            ->where('city_id', $city_id)
-            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value])
-            ->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time'])
-            ->orderBy('is_hot', 'desc')
-            ->orderBy('weight', 'desc')
-            ->orderBy('create_time', 'desc')
-            ->limit(3)
-            ->get()
-            ->toArray();
-        foreach ($items as $item) {
-            $this->objectTransformer($item);
-        }
-        return $items;
-    }
-
-    // 获取城市活动列表
-    public function getApiList(array $params)
-    {
-        $query = Db::table('activity')
-            ->where('status', AbleStatus::ENABLE->value)
-            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value]);
-        if (!empty($params['keyword'])) {
-            $query->where('name', 'like', '%' . $params['keyword'] . '%');
-        }
-        if (!empty($params['city_id'])) {
-            $query->where('city_id', $params['city_id']);
-        }
-        if (!empty($params['date'])) {
-            $start = Carbon::parse($params['date'])->startOfDay()->timestamp;
-            $end = $start + 86400;
-            $query->where('start', '<', $start)
-                ->where('end', '>', $end);
-        }
-        if (!empty($params['lat']) && !empty($params['lon'])) {
-            $userLat = (float)$params['lat'];
-            $userLon = (float)$params['lon'];
-            $earthRadius = 6371;
-            $distanceFormula = "ROUND(
-                $earthRadius * ACOS(
-                    COS(RADIANS($userLat)) * COS(RADIANS(lat)) * 
-                    COS(RADIANS(lon) - RADIANS($userLon)) + 
-                    SIN(RADIANS($userLat)) * SIN(RADIANS(lat))
-                ), 2
-            )";
-            $query->selectRaw('id,cover,name,activity_type,active_status,fee,city,address,lat,lon,start_date,end_date,start_time,end_time,tags,create_time,' . $distanceFormula . ' AS distance');
-        } else {
-            $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time']);
-        }
-        $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $query->orderBy('weight', 'desc')
-            ->orderBy('create_time', 'desc');
-        if (!empty($params['lat']) && !empty($params['lon'])) {
-            $query->orderBy('distance', 'asc');
-        }
-        $data = $query->paginate((int)$page_size, page: (int)$page);
-        $data = paginateTransformer($data);
-        foreach ($data['items'] as $item) {
-            $this->objectTransformer($item);
-        }
-        return $data;
-    }
-
-    // 前端列表数据转换
-    protected function transformerList(array $items): array
-    {
-        if (!empty($items)) {
-            foreach ($items as $item) {
-                $item->tags = json_decode($item->tags, true);
-                $item->cover_url = generateFileUrl($item->cover);
-                $item->activity_type_text = ActivityType::from($item->activity_type)->getMessage();
-            }
-        }
-        return $items;
-    }
-
     protected function objectTransformer(object $item, array $cate = [], array $params = [])
     {
         if (property_exists($item, 'tags')) {
@@ -337,21 +331,11 @@ LIMIT 7;';
                 $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
             }
         }
-    }
-
-    // 活动详情
-    public function detail(int $activity_id, int $user_id): object
-    {
-        $info = Db::table('activity')
-            ->where(['id' => $activity_id])
-            ->select(['id', 'bg', 'cover', 'name', 'activity_type', 'organizer', 'is_hot', 'city', 'city_id', 'address', 'lat', 'lon', 'fee',
-                'start_date', 'end_date', 'start_time', 'end_time', 'weight', 'status', 'active_status', 'tags', 'details', 'create_by', 'create_time'])
-            ->first();
-        if (empty($info)) {
-            throw new ParametersException('活动不存在');
+        if(in_array('creater',$cate)){
+            $item->creater_name = Db::table('sys_user')
+                ->where('user_id', '=', $item->create_by)
+                ->value('nick_name');
         }
-        $this->objectTransformer($info, ['is_like'], ['user_id' => $user_id]);
-        return $info;
     }
 
     // 想看
@@ -387,6 +371,7 @@ LIMIT 7;';
         return true;
     }
 
+    // 检查用户是否想看
     public function checkIsLike(int $activity_id, int $user_id): int
     {
         if (empty($user_id) || empty($activity_id)) {
@@ -398,6 +383,7 @@ LIMIT 7;';
         return $has > 0 ? 1 : 0;
     }
 
+    // 用户报名
     public function signUp(int $activity_id, int $user_id)
     {
         $has = Db::table('activity_user')
@@ -427,6 +413,7 @@ LIMIT 7;';
         return true;
     }
 
+    // 获取用户报名的活动列表
     public function getSignActivityList(array $params = []): array
     {
         $query = Db::table('activity_user')

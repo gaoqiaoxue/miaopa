@@ -24,6 +24,8 @@ class PostsController extends AbstractController
     public function getList(): array
     {
         $params = $this->request->all();
+        $params['audit_status'] = AuditStatus::PASSED->value;
+        $params['is_reported'] = 0;
         $list = $this->service->getApiList($params);
         return returnSuccess($list);
     }
@@ -45,7 +47,7 @@ class PostsController extends AbstractController
             return returnError('缺少必要参数user_id');
         }
         $params['audit_status'] = AuditStatus::PASSED->value;
-        $params['del_flag'] = 0;
+        $params['is_reported'] = 0;
         $list = $this->service->getApiList($params);
         return returnSuccess($list);
     }

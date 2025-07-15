@@ -77,7 +77,7 @@ class FileService
             'file_name' => $originalName,
             'new_file_name' => $newFileName,
             'url' => $storagePath,
-            'thumb' => '', // TODO 视频自动生成封面
+            'thumb' => '',
             'ext' => $extension,
             'size' => $size,
             'mime' => $mimeType,

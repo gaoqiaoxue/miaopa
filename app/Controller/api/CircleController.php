@@ -19,21 +19,31 @@ class CircleController extends AbstractController
     protected CircleService $service;
 
     /**
-     * 圈子列表
+     * 全部圈子(按分类分组,带搜索)
      * @param AuthTokenInterface $authToken
      * @return array
      */
-    public function getList(AuthTokenInterface $authToken): array
+    public function getListByType(AuthTokenInterface $authToken): array
     {
         $keyword = $this->request->input('keyword', '');
-        $keyword = trim((string) $keyword);
-        if(!empty($keyword)){
-            $user_id = 0;
-        }else{
-            $payload = $authToken->getUserData('default', false);
-            $user_id = $payload['jwt_claims']['user_id'] ?? 0;
-        }
+        $keyword = trim((string)$keyword);
+        $payload = $authToken->getUserData('default', false);
+        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $list = $this->service->getAllByType($user_id, $keyword);
+        return returnSuccess($list);
+    }
+
+    public function getList(AuthTokenInterface $authToken): array
+    {
+        $params = $this->request->all();
+        $payload = $authToken->getUserData('default', false);
+        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $params['user_id'] = $user_id;
+        $params['status'] = 1;
+        if(!empty($params['keyword'])){
+            $params['name'] = trim($params['keyword']);
+        }
+        $list = $this->service->getList($params, ['is_follow']);
         return returnSuccess($list);
     }
 
@@ -69,12 +79,12 @@ class CircleController extends AbstractController
      * @return array
      */
     #[Scene('circle_id')]
-    public function detail(CircleRequest $request,AuthTokenInterface $authToken): array
+    public function detail(CircleRequest $request, AuthTokenInterface $authToken): array
     {
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $circle_id = $request->input('circle_id', 0);
-        $list = $this->service->detail($circle_id, $user_id);
+        $list = $this->service->getInfo($circle_id, ['is_follow'], ['user_id' => $user_id]);
         return returnSuccess($list);
     }
 
@@ -85,6 +95,6 @@ class CircleController extends AbstractController
         $user_id = $this->request->getAttribute('user_id');
         $data = $request->validated();
         $this->service->follow($user_id, $data['circle_id'], $data['status']);
-        return returnSuccess([],$data['status'] == 1 ? '关注成功' : '取消关注成功');
+        return returnSuccess([], $data['status'] == 1 ? '关注成功' : '取消关注成功');
     }
 }

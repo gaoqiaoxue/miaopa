@@ -17,11 +17,77 @@ class PostsService
 
     public function getList(array $params): array
     {
+        $params['has_circle'] = true;
+        $query = $this->buildQuery($params);
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+        $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
+            'post.audit_status', 'post.circle_id', 'circle.name as circle_name',
+            'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
+            ->orderBy('post.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        return $data;
+
+    }
+
+    public function getApiList(array $params, bool $is_paginate = true, int $limit = 0): array
+    {
+        if(!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC){
+            $cate = ['cover', 'is_like'];
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+                'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count','post.like_count',
+                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+        }else{
+            $cate =  ['cover'];
+            $params['has_circle'] = true;
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+                'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count','post.like_count',
+                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+        }
+        $query = $this->buildQuery($params);
+        $query = $query->select($columns);
+        // TODO 前端接口综合排序 并且需要可考虑下架 投诉等
+        $query->orderBy('post.create_time', 'desc');
+        if($is_paginate){
+            $page = !empty($params['page']) ? $params['page'] : 1;
+            $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+            $data = $query->paginate((int)$page_size, page: (int)$page);
+            $data = paginateTransformer($data);
+            if (!empty($data['items'])) {
+                foreach ($data['items'] as $key => $item) {
+                    $this->objectTransformer($item, $cate, $params);
+                }
+            }
+        }else{
+            if($limit){
+                $data = $query->limit($limit)->get()->toArray();
+            }else{
+                $data = $query->get()->toArray();
+            }
+            foreach ($data as $item) {
+                $this->objectTransformer($item, $cate, $params);
+            }
+        }
+        return $data;
+    }
+
+    protected function buildQuery(array $params)
+    {
         $query = Db::table('post')
-            ->leftJoin('circle', 'circle.id', '=', 'post.circle_id')
             ->leftJoin('user', 'user.id', '=', 'post.user_id');
+        if(!empty($params['has_circle'])){
+            $query->leftJoin('circle', 'circle.id', '=', 'post.circle_id');
+        }
+        if(!empty($params['is_follow'])){
+            $query->leftJoin('user_follow', 'user_follow.follow_id', '=', 'post.user_id')
+                ->where('user_follow.user_id', '=', $params['current_user_id'] ?? 0);
+        }
         if (!empty($params['title'])) {
             $query->where('post.title', 'like', '%' . $params['title'] . '%');
+        }
+        if (!empty($params['keyword'])) {
+            $query->where('post.title', 'like', '%' . $params['keyword'] . '%');
         }
         if (!empty($params['post_type'])) {
             $query->where('post.post_type', '=', $params['post_type']);
@@ -47,58 +113,11 @@ class PostsService
         if (!empty($params['start_time']) && !empty($params['end_time'])) {
             $query->whereBetween('post.create_time', [$params['start_time'], $params['end_time']]);
         }
-        $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
-            'post.audit_status', 'post.circle_id', 'circle.name as circle_name',
-            'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
-            ->orderBy('post.create_time', 'desc')
-            ->paginate((int)$page_size, page: (int)$page);
-        $data = paginateTransformer($data);
-        return $data;
-
-    }
-
-    public function getApiList(array $params): array
-    {
-        $query = Db::table('post')
-            ->leftJoin('user', 'user.id', '=', 'post.user_id');
-        if(!empty($params['is_follow'])){
-            $query->leftJoin('user_follow', 'user_follow.follow_id', '=', 'post.user_id')
-                ->where('user_follow.user_id', '=', $params['user_id'] ?? 0);
+        if(isset($params['is_reported'])){
+            $query->where('is_reported', '=', 0);
         }
-        if (!empty($params['title'])) {
-            $query->where('post.title', 'like', '%' . $params['title'] . '%');
-        }
-        if (!empty($params['post_type'])) {
-            $query->where('post.post_type', '=', $params['post_type']);
-        }
-        if (!empty($params['circle_id'])) {
-            $query->where('post.circle_id', '=', $params['circle_id']);
-        }
-        if (!empty($params['user_id'])) {
-            $query->where('post.user_id', '=', $params['user_id']);
-        }
-        if (isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
-            $query->where('post.audit_status', '=', $params['audit_status']);
-        }
-        if (!empty($params['start_time']) && !empty($params['end_time'])) {
-            $query->whereBetween('post.create_time', [$params['start_time'], $params['end_time']]);
-        }
-        $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
-            'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count','post.like_count',
-            'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
-            ->orderBy('post.create_time', 'desc')
-            ->paginate((int)$page_size, page: (int)$page);
-        $data = paginateTransformer($data);
-        if (!empty($data['items'])) {
-            foreach ($data['items'] as $key => $item) {
-                $this->objectTransformer($item, ['cover']);
-            }
-        }
-        return $data;
+        $query->where('del_flag', '=', 0);
+        return $query;
     }
 
     public function getInfo(int $post_id, array $cate = [], int $user_id = 0): object
@@ -114,7 +133,7 @@ class PostsService
         if (!$post) {
             throw new LogicException('帖子不存在');
         }
-        $this->objectTransformer($post, $cate, ['user_id' => $user_id]);
+        $this->objectTransformer($post, $cate, ['current_user_id' => $user_id]);
         return $post;
     }
 
@@ -130,13 +149,13 @@ class PostsService
             $item->media_urls = generateMulFileUrl($item->media);
         }
         if (in_array('cover', $cate)) {
-            $item->cover = generateMulFileUrl($item->media)[0] ?? [];
+            $item->cover = $item->media_urls[0] ?? [];
         }
         if (in_array('is_like', $cate)) {
             if (isset($params['like_ids'])) {
                 $item->is_like = in_array($item->id, $params['like_ids']) ? 1 : 0;
             } else {
-                $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
+                $item->is_like = $this->checkIsLike($item->id, $params['current_user_id'] ?? 0);
             }
         }
     }
