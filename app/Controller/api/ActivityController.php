@@ -7,6 +7,7 @@ use App\Library\Contract\AuthTokenInterface;
 use App\Middleware\ApiMiddleware;
 use App\Request\ActivityRequest;
 use App\Service\ActivityService;
+use App\Service\UserViewRecordService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
@@ -35,12 +36,19 @@ class ActivityController extends AbstractController
     }
 
     #[Scene('id')]
-    public function detail(ActivityRequest $request, AuthTokenInterface $authToken): array
+    public function detail(
+        ActivityRequest       $request,
+        AuthTokenInterface    $authToken,
+        UserViewRecordService $viewService
+    ): array
     {
         $activity_id = $request->input('activity_id');
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $info = $this->service->getInfo((int)$activity_id, ['is_like'], ['user_id' => $user_id]);
+        if (!empty($user_id)) {
+            $viewService->addViewRecord('activity', $user_id, $activity_id);
+        }
         return returnSuccess($info);
     }
 
@@ -52,6 +60,15 @@ class ActivityController extends AbstractController
         $user_id = $this->request->getAttribute('user_id');
         $this->service->like((int)$params['activity_id'], (int)$user_id, (int)$params['status']);
         return returnSuccess();
+    }
+
+    #[Middleware(ApiMiddleware::class)]
+    public function likeList()
+    {
+        $params = $this->request->all();
+        $user_id = $this->request->getAttribute('user_id');
+        $list = $this->service->likeList($user_id, $params);
+        return returnSuccess($list);
     }
 
     #[Scene('id')]
@@ -68,8 +85,17 @@ class ActivityController extends AbstractController
     public function signList()
     {
         $params = $this->request->all();
-        $params['user_id'] = $this->request->getAttribute('user_id');
-        $list = $this->service->getSignActivityList($params);
+        $user_id = $this->request->getAttribute('user_id');
+        $list = $this->service->getSignActivityList($user_id, $params);
+        return returnSuccess($list);
+    }
+
+    #[Middleware(ApiMiddleware::class)]
+    public function history(): array
+    {
+        $params = $this->request->all();
+        $user_id = $this->request->getAttribute('user_id');
+        $list = $this->service->viewList($user_id, $params);
         return returnSuccess($list);
     }
 }

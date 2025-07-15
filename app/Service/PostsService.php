@@ -33,23 +33,23 @@ class PostsService
 
     public function getApiList(array $params, bool $is_paginate = true, int $limit = 0): array
     {
-        if(!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC){
-            $cate = ['cover', 'is_like'];
+        if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
+            $cate = ['cover', 'is_like', 'publish_time'];
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
-                'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count','post.like_count',
+                'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
-        }else{
-            $cate =  ['cover'];
+        } else {
+            $cate = ['publish_time'];
             $params['has_circle'] = true;
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
-                'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count','post.like_count',
+                'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
         $query = $this->buildQuery($params);
         $query = $query->select($columns);
         // TODO 前端接口综合排序 并且需要可考虑下架 投诉等
         $query->orderBy('post.create_time', 'desc');
-        if($is_paginate){
+        if ($is_paginate) {
             $page = !empty($params['page']) ? $params['page'] : 1;
             $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
             $data = $query->paginate((int)$page_size, page: (int)$page);
@@ -59,10 +59,10 @@ class PostsService
                     $this->objectTransformer($item, $cate, $params);
                 }
             }
-        }else{
-            if($limit){
+        } else {
+            if ($limit) {
                 $data = $query->limit($limit)->get()->toArray();
-            }else{
+            } else {
                 $data = $query->get()->toArray();
             }
             foreach ($data as $item) {
@@ -72,14 +72,49 @@ class PostsService
         return $data;
     }
 
+    public function viewList(int $user_id, array $params = [])
+    {
+        $query = Db::table('view_history')
+            ->leftJoin('post', 'post.id', '=', 'view_history.content_id')
+            ->leftJoin('user', 'user.id', '=', 'post.user_id');
+        if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
+            $cate = ['cover', 'is_like', 'publish_time'];
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+                'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
+                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+        } else {
+            $cate = ['publish_time'];
+            $query->leftJoin('circle', 'circle.id', '=', 'post.circle_id');
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+                'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
+                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+        }
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+        $data = $query->where('view_history.user_id', $user_id)
+            ->where('view_history.content_type', '=', $params['view_type'])
+            ->where('post.audit_status', '=', AuditStatus::PASSED)
+            ->where('post.del_flag', '=', 0)
+            ->where('post.is_reported', '=', 0)
+            ->select($columns)
+            ->orderBy('view_history.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        foreach ($data['items'] as $item) {
+            var_dump($item);
+            $this->objectTransformer($item, $cate);
+        }
+        return $data;
+    }
+
     protected function buildQuery(array $params)
     {
         $query = Db::table('post')
             ->leftJoin('user', 'user.id', '=', 'post.user_id');
-        if(!empty($params['has_circle'])){
+        if (!empty($params['has_circle'])) {
             $query->leftJoin('circle', 'circle.id', '=', 'post.circle_id');
         }
-        if(!empty($params['is_follow'])){
+        if (!empty($params['is_follow'])) {
             $query->leftJoin('user_follow', 'user_follow.follow_id', '=', 'post.user_id')
                 ->where('user_follow.user_id', '=', $params['current_user_id'] ?? 0);
         }
@@ -113,7 +148,7 @@ class PostsService
         if (!empty($params['start_time']) && !empty($params['end_time'])) {
             $query->whereBetween('post.create_time', [$params['start_time'], $params['end_time']]);
         }
-        if(isset($params['is_reported'])){
+        if (isset($params['is_reported'])) {
             $query->where('is_reported', '=', 0);
         }
         $query->where('del_flag', '=', 0);
@@ -157,6 +192,9 @@ class PostsService
             } else {
                 $item->is_like = $this->checkIsLike($item->id, $params['current_user_id'] ?? 0);
             }
+        }
+        if (in_array('publish_time', $cate)) {
+            $item->create_time = getPublishTime(strtotime($item->create_time));
         }
     }
 

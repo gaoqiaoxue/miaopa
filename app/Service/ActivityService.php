@@ -149,11 +149,6 @@ class ActivityService
         return $data;
     }
 
-    protected function buildQuery($params = [])
-    {
-
-    }
-
     // 活动详情
     public function getInfo(int $activity_id, array $cate = [], array $params = [])
     {
@@ -414,11 +409,11 @@ LIMIT 7;';
     }
 
     // 获取用户报名的活动列表
-    public function getSignActivityList(array $params = []): array
+    public function getSignActivityList(int $user_id, array $params = []): array
     {
         $query = Db::table('activity_user')
             ->leftJoin('activity', 'activity.id', '=', 'activity_user.activity_id')
-            ->where('activity_user.user_id', $params['user_id'])
+            ->where('activity_user.user_id', $user_id)
             ->where('activity_user.status', ActivityUserStatus::JOINED->value);
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -426,6 +421,46 @@ LIMIT 7;';
             'activity.active_status', 'activity.fee', 'activity.city', 'activity.address', 'activity.lat', 'activity.lon',
             'activity.start_date', 'activity.end_date', 'activity.start_time', 'activity.end_time', 'activity.tags'])
             ->orderBy('activity_user.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        foreach ($data['items'] as $item) {
+            $this->objectTransformer($item);
+        }
+        return $data;
+    }
+
+    // 获取用户想参与的活动列表
+    public function likeList(int $user_id, array $params = [])
+    {
+        $query = Db::table('activity_like')
+            ->leftJoin('activity', 'activity.id', '=', 'activity_like.activity_id')
+            ->where('activity_like.user_id', $user_id);
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+        $data = $query->select(['activity.id as activity_id', 'activity.cover', 'activity.name', 'activity.activity_type',
+            'activity.active_status', 'activity.fee', 'activity.city', 'activity.address', 'activity.lat', 'activity.lon',
+            'activity.start_date', 'activity.end_date', 'activity.start_time', 'activity.end_time', 'activity.tags'])
+            ->orderBy('activity_like.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $data = paginateTransformer($data);
+        foreach ($data['items'] as $item) {
+            $this->objectTransformer($item);
+        }
+        return $data;
+    }
+
+    public function viewList(int $user_id, array $params = [])
+    {
+        $query = Db::table('view_history')
+            ->leftJoin('activity', 'activity.id', '=', 'view_history.content_id')
+            ->where('view_history.user_id', $user_id)
+            ->where('view_history.content_type', '=','activity');
+        $page = !empty($params['page']) ? $params['page'] : 1;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+        $data = $query->select(['activity.id as activity_id', 'activity.cover', 'activity.name', 'activity.activity_type',
+            'activity.active_status', 'activity.fee', 'activity.city', 'activity.address', 'activity.lat', 'activity.lon',
+            'activity.start_date', 'activity.end_date', 'activity.start_time', 'activity.end_time', 'activity.tags'])
+            ->orderBy('view_history.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         foreach ($data['items'] as $item) {

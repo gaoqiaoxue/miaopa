@@ -38,7 +38,7 @@ class IndexController extends AbstractController
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $result = [
             'circle' => $circleService->getSelect(['name' => $keyword, 'status' => 1], ['id', 'name', 'cover'], 6),
-            'user' => $userService->getApiList(['keyword' => $keyword, 'user_id' => $user_id], false, 6),
+            'user' => $userService->getApiList(['keyword' => $keyword, 'current_user_id' => $user_id], false, 6),
             'activity' => $activityService->getApiSelect(['keyword' => $keyword], 6),
             'qa' => $postsService->getApiList(['keyword' => $keyword, 'post_type' => PostType::QA->value,'current_user_id' => $user_id],false, 6),
             'dynamic' => $postsService->getApiList(['keyword' => $keyword, 'post_type' => PostType::DYNAMIC->value,'current_user_id' => $user_id],false, 6),

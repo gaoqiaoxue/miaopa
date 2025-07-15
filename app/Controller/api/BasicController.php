@@ -73,7 +73,8 @@ class BasicController extends AbstractController
      */
     public function getCitys(RegionService $service): array
     {
-        $regions = $service->getCitys();
+        $params = $this->request->all();
+        $regions = $service->getCitys($params);
         return returnSuccess($regions);
     }
 

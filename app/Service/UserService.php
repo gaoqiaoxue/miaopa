@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Constants\Sex;
 use App\Exception\LogicException;
 use App\Library\Contract\AuthTokenInterface;
+use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
@@ -31,9 +32,9 @@ class UserService
     public function getApiList(array $params, bool $paginate = true, int $limit = 0)
     {
         $query = $this->buildQuery($params);
-        $query->select(['id','nickname', 'avatar', 'fans_num'])
+        $query->select(['id', 'nickname', 'avatar', 'fans_num'])
             ->orderBy('create_time', 'desc');
-        if($paginate){
+        if ($paginate) {
             $page = !empty($params['page']) ? $params['page'] : 1;
             $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
             $data = $query->paginate((int)$page_size, page: (int)$page);
@@ -41,10 +42,10 @@ class UserService
             if (!empty($data['items'])) {
                 $data['items'] = $this->apiListTransformer($data['items'], $params);
             }
-        }else{
-            if($limit){
+        } else {
+            if ($limit) {
                 $data = $query->limit($limit)->get()->toArray();
-            }else{
+            } else {
                 $data = $query->get()->toArray();
             }
             $data = $this->apiListTransformer($data, $params);
@@ -55,15 +56,16 @@ class UserService
     protected function apiListTransformer(array $items, array $params = [])
     {
         $u_ids = array_column($items, 'id');
-        $follow_ids = $this->followService->getFollowIds($params['user_id'], $u_ids);
+        $follow_ids = $this->followService->getFollowIds($params['current_user_id'] ?? 0, $u_ids);
         foreach ($items as $item) {
             $item->is_follow = in_array($item['id'], $follow_ids) ? 1 : 0;
-            $this->objectTransformer($item,[],$params);
+            $this->objectTransformer($item, [], $params);
         }
         return $items;
     }
 
-    protected function buildQuery(array $params){
+    protected function buildQuery(array $params)
+    {
         $query = Db::table('user');
         if (!empty($params['username'])) {
             $query->where('username', 'like', '%' . $params['username'] . '%');
@@ -71,7 +73,7 @@ class UserService
         if (!empty($params['nickname'])) {
             $query->where('nickname', 'like', '%' . $params['nickname'] . '%');
         }
-        if(!empty($params['keyword'])){
+        if (!empty($params['keyword'])) {
             $query->where('nickname', 'like', '%' . $params['keyword'] . '%');
         }
         if (!empty($params['mobile'])) {
@@ -83,40 +85,71 @@ class UserService
         if (!empty($params['id'])) {
             $query->where('id', '=', $params['id']);
         }
-        if(!empty($params['start_time']) && !empty($params['end_time'])){
+        if (!empty($params['start_time']) && !empty($params['end_time'])) {
             $query->whereBetween('create_time', [$params['start_time'], $params['end_time']]);
         }
         return $query;
     }
 
-    public function getInfo(int $id): object
+    public function getInfo(int $id, array $cate = ['created_days', 'prestige'], array $params = []): object
     {
-        $columns = ['id', 'name', 'username', 'nickname', 'sex', 'avatar', 'signature', 'region', 'school', 'mobile', 'create_time'];
+        $columns = ['id', 'name', 'username', 'nickname', 'sex', 'avatar', 'bg', 'signature', 'region', 'school', 'mobile', 'create_time', 'fans_num', 'follow_num', 'like_num'];
         $user = Db::table('user')->where(['id' => $id])->select($columns)->first();
         if (!$user) {
             throw new LogicException('用户不存在');
         }
-        $this->objectTransformer($user,['created_days', 'prestige']);
+        $this->objectTransformer($user, $cate, $params);
         return $user;
     }
 
     protected function objectTransformer(object $item, array $cate = [], array $params = [])
     {
-        if(property_exists($item, 'avatar')) {
+        if (property_exists($item, 'avatar')) {
             $item->avatar_url = getAvatar($item->avatar);
         }
-        if(in_array('created_days', $cate)){
+        if (property_exists($item, 'bg')) {
+            $item->bg_url = generateFileUrl($item->bg);
+        }
+        if (in_array('created_days', $cate)) {
             $start = strtotime($item->create_time);
             $end = time();
-            $item->created_days =  ceil(abs($end - $start) / 86400);
+            $item->created_days = ceil(abs($end - $start) / 86400);
         }
-        if(in_array('prestige', $cate) || in_array('coin', $cate)){
+        if (in_array('prestige', $cate) || in_array('coin', $cate)) {
             $credit = $this->creditService->getUserCredit($item->id);
             in_array('prestige', $cate) && $item->prestige = $credit['prestige'] ?? 0;
             in_array('coin', $cate) && $item->coin = $credit['coin'] ?? 0;
         }
-        if(in_array('is_follow', $cate)){
-            $item->is_follow = $this->followService->checkIsFollow($params['user_id'] ?? 0, $item->user_id);
+        if (in_array('is_follow', $cate)) {
+            $item->is_follow = $this->followService->checkIsFollow($params['current_user_id'] ?? 0, $item->id);
         }
+    }
+
+    #[Cacheable(prefix: 'user_visit', ttl: 3600)]
+    public function addHomeViewRecord(int $visitor_id, int $user_id): bool
+    {
+        Db::table('user_visit')->insert([
+            'visitor_id' => $visitor_id,
+            'user_id' => $user_id,
+            'create_time' => date('Y-m-d H:i:s')
+        ]);
+        return true;
+    }
+
+    public function getVisitorList(int $user_id, array $params): array
+    {
+        $page = empty($params['page']) ? 1 : (int)$params['page'];
+        $page_size = empty($params['page_size']) ? 15 : (int)$params['page_size'];
+        $list = Db::table('user_visit')
+            ->leftJoin('user', 'user.id', '=', 'user_visit.visitor_id')
+            ->where(['user_visit.user_id' => $user_id])
+            ->select(['user.id', 'user.nickname', 'user.avatar'])
+            ->orderBy('user_visit.create_time', 'desc')
+            ->paginate((int)$page_size, page: (int)$page);
+        $list = paginateTransformer($list);
+        foreach ($list['items'] as $item) {
+            $this->objectTransformer($item, [], $params);
+        }
+        return $list;
     }
 }

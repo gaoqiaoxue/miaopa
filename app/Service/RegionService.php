@@ -76,12 +76,15 @@ class RegionService
         }
     }
 
-    public function getCitys(): array
+    public function getCitys(array $params = []): array
     {
 
-        $citys = Db::table('sys_region')
-            ->where(['level' => 2])
-            ->orderBy('pin', 'asc')
+        $query = Db::table('sys_region')
+            ->where(['level' => 2]);
+        if(!empty($params['keyword'])){
+            $query->where('name', 'like', '%' . $params['keyword'] . '%');
+        }
+        $citys = $query->orderBy('pin', 'asc')
             ->orderBy('id', 'desc')
             ->select(['id', 'name', 'pin'])
             ->get()
@@ -105,7 +108,7 @@ class RegionService
             ->select(['id', 'name', 'pin'])
             ->get()
             ->toArray();
-        return returnSuccess(['list' => $list, 'hot' => $hot]);
+        return ['list' => $list, 'hot' => $hot];
     }
 
 }

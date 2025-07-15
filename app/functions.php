@@ -159,9 +159,9 @@ if (!function_exists('generateMulFileUrl')) {
 }
 
 if (!function_exists('getPublishTime')) {
-    function getPublishTime($date)
+    function getPublishTime($time)
     {
-        $diff = time() - $date;
+        $diff = time() - $time;
         if ($diff < 60) {
             return '刚刚';
         } elseif ($diff < 3600) {
@@ -171,7 +171,7 @@ if (!function_exists('getPublishTime')) {
         } elseif ($diff < 86400 * 7) {
             return floor($diff / 86400) . '天前';
         } else {
-            return date('Y-m-d', $date);
+            return date('Y-m-d', $time);
         }
     }
 }
@@ -200,5 +200,23 @@ if (!function_exists('logGet')) {
         return \Hyperf\Context\ApplicationContext::getContainer()
             ->get(\Hyperf\Logger\LoggerFactory::class)
             ->get($name, $group);
+    }
+}
+
+if(!function_exists('getPublishTime')){
+    function getPublishTime($date)
+    {
+        $diff = time() - $date;
+        if ($diff < 60) {
+            return '刚刚';
+        } elseif ($diff < 3600) {
+            return floor($diff / 60) . '分钟前';
+        } elseif ($diff < 86400) {
+            return floor($diff / 3600) . '小时前';
+        } elseif ($diff < 86400 * 7) {
+            return floor($diff / 86400) . '天前';
+        } else {
+            return date('Y-m-d', $date);
+        }
     }
 }

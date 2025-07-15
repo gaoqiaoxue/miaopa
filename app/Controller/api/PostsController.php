@@ -3,6 +3,7 @@
 namespace App\Controller\api;
 
 use App\Constants\AuditStatus;
+use App\Constants\PostType;
 use App\Controller\AbstractController;
 use App\Library\Contract\AuthTokenInterface;
 use App\Middleware\ApiMiddleware;
@@ -21,11 +22,14 @@ class PostsController extends AbstractController
     #[Inject]
     protected PostsService $service;
 
-    public function getList(): array
+    public function getList(AuthTokenInterface $authToken): array
     {
         $params = $this->request->all();
         $params['audit_status'] = AuditStatus::PASSED->value;
         $params['is_reported'] = 0;
+        $payload = $authToken->getUserData('default', false);
+        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $params['current_user_id'] = $user_id;
         $list = $this->service->getApiList($params);
         return returnSuccess($list);
     }
@@ -35,12 +39,12 @@ class PostsController extends AbstractController
     {
         $params = $this->request->all();
         $user_id = $this->request->getAttribute('user_id');
-        $params['user_id'] = $user_id;
+        $params['user_id'] = $params['current_user_id'] = $user_id;
         $list = $this->service->getApiList($params);
         return returnSuccess($list);
     }
 
-    public function getUserPosts(): array
+    public function getUserPosts(AuthTokenInterface $authToken): array
     {
         $params = $this->request->all();
         if (empty($params['user_id'])) {
@@ -48,6 +52,9 @@ class PostsController extends AbstractController
         }
         $params['audit_status'] = AuditStatus::PASSED->value;
         $params['is_reported'] = 0;
+        $payload = $authToken->getUserData('default', false);
+        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $params['current_user_id'] = $user_id;
         $list = $this->service->getApiList($params);
         return returnSuccess($list);
     }
@@ -65,7 +72,8 @@ class PostsController extends AbstractController
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $info = $this->service->getInfo($post_id, ['is_like'], $user_id);
         if (!empty($user_id) && $user_id != $info->user_id) {
-            $viewService->addPostViewRecord($info->post_type, $user_id, $post_id);
+            $type = $viewService->getPostViewType($info->post_type);
+            $viewService->addViewRecord($type, $user_id, $post_id);
             $info->is_follow = $followService->checkIsFollow($user_id, $info->user_id);
         } else {
             $info->is_follow = 0;
@@ -81,5 +89,19 @@ class PostsController extends AbstractController
         $user_id = $this->request->getAttribute('user_id');
         $res = $this->service->publish($user_id, $params);
         return returnSuccess(['id' => $res]);
+    }
+
+    #[Middleware(ApiMiddleware::class)]
+    public function history(UserViewRecordService $viewService): array
+    {
+        $params = $this->request->all();
+        if(empty($params['post_type'])){
+            return returnError('缺少必要参数post_type');
+        }
+        $user_id = $this->request->getAttribute('user_id');
+        $params['current_user_id'] = $user_id;
+        $params['view_type'] = $viewService->getPostViewType($params['post_type']);
+        $list = $this->service->viewList($user_id, $params);
+        return returnSuccess($list);
     }
 }
