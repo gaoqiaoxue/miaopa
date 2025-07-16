@@ -56,7 +56,13 @@ class UserSignService
             $sign_list[] = ['day' => '第' . $days + $i . '天', 'is_signed' => 0, 'coins' => $daily_coins + ($continuous_coin_set[$days + $i] ?? 0)];
         }
         foreach ($continuous_sign as &$item) {
-            $item['is_finished'] = $sign['continuous_days'] > $item['time'];
+            $item['is_finished'] = $sign['continuous_days'] >= $item['time'] ? 1 : 0;
+        }
+        $coin_finish_status = $this->creditService->getCoinTask($user_id);
+        $stay_time_config = $config->stay_time_config;
+        $stay_time = $coin_finish_status['stay'] ?? 0;
+        foreach ($stay_time_config as &$item){
+            $item['is_finished'] = $stay_time >= $item['time'] ? 1 : 0;
         }
         return [
             'coin' => $coin,
@@ -68,17 +74,17 @@ class UserSignService
                 'continuous_sign' => $continuous_sign,
                 'post' => [
                     'coins' => $config->post_coins,
-                    'is_finished' => $this->creditService->getCoinTaskStatus($user_id, 'post'),
+                    'is_finished' => $coin_finish_status['post'] ?? 0,
                 ],
                 'comment' => [
                     'coins' => $config->comment_coins,
-                    'is_finished' => $this->creditService->getCoinTaskStatus($user_id, 'comment'),
+                    'is_finished' => $coin_finish_status['comment'] ?? 0,
                 ],
                 'activity' => [
                     'coins' => $config->activity_coins,
-                    'is_finished' => $this->creditService->getCoinTaskStatus($user_id, 'activity'),
+                    'is_finished' => $coin_finish_status['activity'] ?? 0,
                 ],
-                'stay_time' => $config->stay_time_config,
+                'stay_time' => $stay_time_config,
             ],
         ];
     }
@@ -119,7 +125,7 @@ class UserSignService
         $continuous_sign = $config->continuous_sign_config;
         $continuous_days = $continuous_days + 1;
         Db::beginTransaction();
-        try{
+        try {
 
             if (empty($sign_status['record'])) {
                 $res = Db::table('user_sign')->insert([
@@ -141,41 +147,41 @@ class UserSignService
                 throw new LogicException('更新失败');
             }
             $res = $this->creditService->setCoin($user_id, $daily_coins, CoinCate::SIGN->value, 0, '签到奖励');
-            if(!$res){
+            if (!$res) {
                 Db::rollBack();
                 throw new LogicException('签到奖励获取失败');
             }
             $continuous_coin = 0;
             foreach ($continuous_sign as $item) {
-                if($item['time'] == $continuous_days) {
+                if ($item['time'] == $continuous_days) {
                     $continuous_coin = $item['coins'];
                     break;
-                }elseif ($item['time'] > $continuous_days) {
+                } elseif ($item['time'] > $continuous_days) {
                     break;
                 }
             }
-            if($continuous_coin > 0){
+            if ($continuous_coin > 0) {
                 $res = $this->creditService->setCoin($user_id, $daily_coins, CoinCate::CON_SIGN->value, 0, '连续签到奖励');
-                if(!$res){
+                if (!$res) {
                     Db::rollBack();
                     throw new LogicException('签到奖励获取失败');
                 }
             }
             $res = Db::table('user_sign_record')->insert([
                 'user_id' => $user_id,
-                'date' => date('Y-m-d',$current_time),
+                'date' => date('Y-m-d', $current_time),
                 'sign_time' => $current_date,
                 'continuous_days' => $continuous_days,
                 'coin' => $daily_coins,
                 'continuous_coin' => $continuous_coin
             ]);
-            if(!$res){
+            if (!$res) {
                 Db::rollBack();
                 throw new LogicException('签到记录失败');
             }
             Db::commit();
             return true;
-        }catch (\Throwable $ex){
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }

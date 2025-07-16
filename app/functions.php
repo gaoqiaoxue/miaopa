@@ -203,6 +203,14 @@ if (!function_exists('logGet')) {
     }
 }
 
+if(!function_exists('redisHandler')){
+    function redisHandler()
+    {
+        return \Hyperf\Context\ApplicationContext::getContainer()
+            ->get(\Hyperf\Redis\Redis::class);
+    }
+}
+
 if(!function_exists('getPublishTime')){
     function getPublishTime($date)
     {

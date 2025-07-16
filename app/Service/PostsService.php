@@ -4,7 +4,9 @@ namespace App\Service;
 
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
+use App\Constants\CoinCate;
 use App\Constants\PostType;
+use App\Constants\PrestigeCate;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
@@ -14,6 +16,9 @@ class PostsService
 {
     #[Inject]
     protected AuditService $auditService;
+
+    #[Inject]
+    protected CreditService $creditService;
 
     public function getList(array $params): array
     {
@@ -101,7 +106,6 @@ class PostsService
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         foreach ($data['items'] as $item) {
-            var_dump($item);
             $this->objectTransformer($item, $cate);
         }
         return $data;
@@ -254,18 +258,39 @@ class PostsService
 
     public function publish(int $user_id, array $params, $source = 'user'): int
     {
-        return Db::table('post')->insertGetId([
-            'user_id' => $user_id,
-            'circle_id' => $params['circle_id'],
-            'title' => $params['title'],
-            'content' => $params['content'],
-            'post_type' => $params['post_type'],
-            'media' => empty($params['media']) ? '' : implode(',', $params['media']),
-            'create_time' => date('Y-m-d H:i:s'),
-            'update_time' => date('Y-m-d H:i:s'),
-            'source' => $source,
-            'audit_status' => $source == 'user' ? AuditStatus::PENDING->value : AuditStatus::PASSED->value,
-        ]);
+        Db::beginTransaction();
+        try {
+            $post_id = Db::table('post')->insertGetId([
+                'user_id' => $user_id,
+                'circle_id' => $params['circle_id'],
+                'title' => $params['title'],
+                'content' => $params['content'],
+                'post_type' => $params['post_type'],
+                'media' => empty($params['media']) ? '' : implode(',', $params['media']),
+                'create_time' => date('Y-m-d H:i:s'),
+                'update_time' => date('Y-m-d H:i:s'),
+                'source' => $source,
+                'audit_status' => $source == 'user' ? AuditStatus::PENDING->value : AuditStatus::PASSED->value,
+            ]);
+            $this->publishSuccess($user_id,$params['post_type'],$post_id);
+        }catch (\Throwable $ex){
+            Db::rollBack();
+            throw new LogicException($ex->getMessage());
+        }
+        return $post_id;
+    }
+
+    // 帖子发布成功奖励
+    protected function publishSuccess(int $user_id, int $post_type, int $post_id)
+    {
+        // 金币奖励
+        $this->creditService->finishCoinTask($user_id, CoinCate::POST, $post_id, '发布帖子');
+        // 声望奖励
+        if($post_type == PostType::DYNAMIC->value){
+            $this->creditService->finishPrestigeTask($user_id, PrestigeCate::DYNAMIC, $post_id, '发布动态');
+        }else{
+            $this->creditService->finishPrestigeTask($user_id, PrestigeCate::QA, $post_id, '发布问答');
+        }
     }
 
     public function like(int $post_id, int $user_id, int $status): bool
