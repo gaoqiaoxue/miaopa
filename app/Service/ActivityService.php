@@ -6,6 +6,8 @@ use App\Constants\AbleStatus;
 use App\Constants\ActiveStatus;
 use App\Constants\ActivityType;
 use App\Constants\ActivityUserStatus;
+use App\Constants\CoinCate;
+use App\Constants\PrestigeCate;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Carbon\Carbon;
@@ -17,6 +19,9 @@ class ActivityService
 {
     #[Inject]
     protected UserViewRecordService $viewService;
+
+    #[Inject]
+    protected CreditService $creditService;
 
     public function __construct()
     {
@@ -331,6 +336,17 @@ LIMIT 7;';
                 ->where('user_id', '=', $item->create_by)
                 ->value('nick_name');
         }
+        if(in_array('city', $cate)){
+            $city = Db::table('sys_region')
+                ->where('id', '=', $item->city_id)
+                ->first(['id','pid', 'name', 'full_name']);
+            $item->cityInfo = [
+                'city_id' => $city->id,
+                'city_name' => $city->name,
+                'province_id' => $city->pid,
+                'province_name' => explode( '/', $city->full_name)[0] ?? ''
+            ];
+        }
     }
 
     // 想看
@@ -390,7 +406,7 @@ LIMIT 7;';
         $activity = Db::table('activity')
             ->where('id', $activity_id)
             ->first();
-        if (empty($activity)) {
+        if (empty($activity) || $activity->status == 0) {
             throw new LogicException('活动不存在');
         }
         if ($activity->active_status == ActiveStatus::ENDED->value) {
@@ -405,7 +421,15 @@ LIMIT 7;';
             'create_time' => date('Y-m-d H:i:s'),
             'update_time' => date('Y-m-d H:i:s'),
         ]);
+        $this->signSuccess($user_id, $activity);
         return true;
+    }
+
+    // 活动报名成功奖励
+    protected function signSuccess(int $user_id, object $activity)
+    {
+        // 金币奖励
+        $this->creditService->finishCoinTask($user_id, CoinCate::ACTIVITY, $activity->id, '活动报名:'.$activity->name);
     }
 
     // 获取用户报名的活动列表

@@ -7,6 +7,7 @@ use App\Constants\AuditType;
 use App\Constants\CoinCate;
 use App\Constants\PostType;
 use App\Constants\PrestigeCate;
+use App\Constants\ReferType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
@@ -40,13 +41,13 @@ class PostsService
     {
         if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
             $cate = ['cover', 'is_like', 'publish_time'];
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $cate = ['publish_time'];
             $params['has_circle'] = true;
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
@@ -84,13 +85,13 @@ class PostsService
             ->leftJoin('user', 'user.id', '=', 'post.user_id');
         if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
             $cate = ['cover', 'is_like', 'publish_time'];
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $cate = ['publish_time'];
             $query->leftJoin('circle', 'circle.id', '=', 'post.circle_id');
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
@@ -165,7 +166,7 @@ class PostsService
             ->leftJoin('circle', 'circle.id', '=', 'post.circle_id')
             ->leftJoin('user', 'user.id', '=', 'post.user_id')
             ->where('post.id', '=', $post_id)
-            ->select(['post.id', 'post.title', 'post.content', 'post.media', 'post.post_type',
+            ->select(['post.id', 'post.title', 'post.content', 'post.media', 'post.media_type','post.post_type',
                 'post.audit_status', 'post.audit_result', 'post.circle_id', 'circle.cover as circle_cover', 'circle.name as circle_name',
                 'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'])
             ->first();
@@ -267,6 +268,7 @@ class PostsService
                 'content' => $params['content'],
                 'post_type' => $params['post_type'],
                 'media' => empty($params['media']) ? '' : implode(',', $params['media']),
+                'media_type' => $params['media_type'] ?? 1,
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s'),
                 'source' => $source,
@@ -301,6 +303,12 @@ class PostsService
         if ((empty($has) && $status == 0) || (!empty($has) && $status == 1)) {
             return true;
         }
+        $post = Db::table('post')
+            ->where('id', '=', $post_id)
+            ->first(['id', 'source', 'audit_status', 'user_id']);
+        if(empty($post)){
+            throw new LogicException('帖子不存在');
+        }
         Db::beginTransaction();
         try {
             if ($status == 1) {
@@ -310,6 +318,7 @@ class PostsService
                     'create_time' => date('Y-m-d H:i:s'),
                 ]);
                 $res2 = Db::table('post')->where('id', '=', $post_id)->increment('like_count');
+                $this->likeSuccess($user_id, $post);
             } else {
                 $res1 = Db::table('post_like')
                     ->where(['post_id' => $post_id, 'user_id' => $user_id])
@@ -317,6 +326,7 @@ class PostsService
                 $res2 = Db::table('post')->where('id', '=', $post_id)->decrement('like_count');
             }
             if (!$res1 || !$res2) {
+                Db::rollBack();
                 throw new LogicException('操作失败');
             }
             Db::commit();
@@ -325,6 +335,14 @@ class PostsService
             throw new ParametersException($ex->getMessage());
         }
         return true;
+    }
+
+    // 点赞成功奖励
+    protected function likeSuccess(int $user_id, object $post)
+    {
+        // 声望
+        $this->creditService->finishPrestigeTask($post->user_id, PrestigeCate::BE_LIKED, $post->id, '获赞', ReferType::POST->value, $user_id);
+        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::LIKE, $post->id, '点赞', ReferType::POST->value);
     }
 
     public function checkIsLike(int $post_id, int $user_id): int
@@ -336,6 +354,24 @@ class PostsService
             ->where(['post_id' => $post_id, 'user_id' => $user_id])
             ->count();
         return $has > 0 ? 1 : 0;
+    }
+
+    public function share(int $user_id, int $post_id)
+    {
+        Db::beginTransaction();
+        try {
+            Db::table('post_share')->insert([
+                'user_id' => $user_id,
+                'post_id' => $post_id,
+                'create_time' => date('Y-m-d H:i:s'),
+            ]);
+            $this->creditService->finishPrestigeTask($user_id, PrestigeCate::SHARE, $post_id, '帖子分享', ReferType::POST->value);
+            Db::commit();
+        } catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new ParametersException($ex->getMessage());
+        }
+        return true;
     }
 
 

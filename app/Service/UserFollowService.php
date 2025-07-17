@@ -2,11 +2,16 @@
 
 namespace App\Service;
 
+use App\Constants\PrestigeCate;
+use App\Constants\ReferType;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
 class UserFollowService
 {
+    #[Inject]
+    protected CreditService $creditService;
+
     public function follow(int $user_id, int $follow_id, int $status): bool
     {
         $has = Db::table('user_follow')
@@ -24,6 +29,7 @@ class UserFollowService
             ]);
             Db::table('user')->where('id', '=', $follow_id)->increment('fans_num');
             Db::table('user')->where('id', '=', $user_id)->increment('follow_num');
+            $this->followSuccess($user_id, $follow_id);
         } else {
             Db::table('user_follow')
                 ->where(['follow_id' => $follow_id, 'user_id' => $user_id])
@@ -33,6 +39,13 @@ class UserFollowService
         }
         Db::commit();
         return true;
+    }
+
+    public function followSuccess(int $user_id, int $follow_id)
+    {
+        // 声望
+        $this->creditService->finishPrestigeTask($follow_id, PrestigeCate::FANS, $user_id, '被关注');
+        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::FOLLOW, $follow_id, '关注');
     }
 
     public function checkIsFollow(int $user_id, int $follow_id): int

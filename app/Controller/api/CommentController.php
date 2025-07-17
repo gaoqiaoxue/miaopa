@@ -2,12 +2,15 @@
 
 namespace App\Controller\api;
 
+use App\Constants\ReportType;
 use App\Controller\AbstractController;
 use App\Library\Contract\AuthTokenInterface;
 use App\Middleware\ApiMiddleware;
 use App\Request\CommentRequest;
+use App\Request\ReportRequest;
 use App\Service\CommentService;
 use App\Service\PostsService;
+use App\Service\ReportService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
@@ -39,6 +42,18 @@ class CommentController extends AbstractController
         $detail = $this->service->getCommentDetail((int)$comment_id, (int)$user_id);
         $detail->post_info = $postsService->getInfo($detail->post_id,['is_like'], (int)$user_id);
         return returnSuccess($detail);
+    }
+
+    #[Middleware(ApiMiddleware::class)]
+    public function answerShare()
+    {
+        $user_id = $this->request->getAttribute('user_id');
+        $answer_id = $this->request->input('answer_id', 0);
+        if(empty($answer_id)){
+            return returnError('参数错误');
+        }
+        $this->service->answerShare($user_id, $answer_id);
+        return returnSuccess();
     }
 
     public function getCommentList(AuthTokenInterface $authToken): array
@@ -92,6 +107,17 @@ class CommentController extends AbstractController
         $params = $request->validated();
         $user_id = $this->request->getAttribute('user_id');
         $this->service->like($params['comment_id'], $user_id, $params['status'] ?? 1);
+        return returnSuccess();
+    }
+
+
+    #[Middleware(ApiMiddleware::class)]
+    #[Scene('comment_report')]
+    public function report(ReportRequest $request, ReportService $reportService)
+    {
+        $data = $request->validated();
+        $user_id = $this->request->getAttribute('user_id');
+        $reportService->report($user_id, ReportType::COMMENT, $data);
         return returnSuccess();
     }
 }

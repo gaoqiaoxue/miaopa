@@ -12,6 +12,10 @@ class FileService
     #[Inject]
     protected Filesystem $filesystem;
 
+    protected $allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg'];
+
+    protected $allowedVideoExtensions = ['mp4', 'avi', 'wmv', 'flv', 'mkv', 'mov', 'mpg', 'mpeg', 'webm', 'm4v', '3gp', 'ogv', 'ogg', 'mts'];
+
     /**
      * 上传文件并保存记录到数据库
      *
@@ -35,17 +39,11 @@ class FileService
         // 检查文件是否已存在
         $existFile = Db::table('sys_upload')->where('md5', $fileMd5)->first();
         if ($existFile) {
-            return [
-                'upload_id' => $existFile->upload_id,
-                'path' => $existFile->url,
-                'url' => generateFileUrl($existFile->url),
-            ];
+            return $this->uploadSuccess($existFile->upload_id, $existFile->url, $extension);
         }
 
         // 文件类型校验，只允许图片和视频上传
-        $allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg'];
-        $allowedVideoExtensions = ['mp4', 'avi', 'wmv', 'flv', 'mkv', 'mov', 'mpg', 'mpeg', 'webm', 'm4v', '3gp', 'ogv', 'ogg', 'mts'];
-        $allowedExtensions = array_merge($allowedImageExtensions, $allowedVideoExtensions);
+        $allowedExtensions = array_merge($this->allowedImageExtensions, $this->allowedVideoExtensions);
         if (!in_array(strtolower($extension), $allowedExtensions)) {
             throw new ParametersException('不支持的文件类型');
         }
@@ -64,7 +62,7 @@ class FileService
         $stream = fopen($file->getRealPath(), 'r');
         try {
             $this->filesystem->writeStream($storagePath, $stream);
-        }catch (\Throwable $throwable){
+        } catch (\Throwable $throwable) {
             var_dump($throwable->getMessage());
         } finally {
             if (is_resource($stream)) {
@@ -89,10 +87,24 @@ class FileService
 
         $uploadId = Db::table('sys_upload')->insertGetId($fileData);
 
+        return $this->uploadSuccess($uploadId, $storagePath, $extension);
+    }
+
+    protected function uploadSuccess($uploadId, $storagePath, $extension): array
+    {
+
+        $thumb = '';
+        $type = 'image';
+        if (in_array($extension, $this->allowedVideoExtensions)) {
+            $type = 'video';
+            $thumb = generateFileUrl($storagePath. '?x-oss-process=video/snapshot,t_1000,f_jpg,w_0,h_0,m_fast');
+        }
         return [
             'upload_id' => $uploadId,
             'path' => $storagePath,
             'url' => generateFileUrl($storagePath),
+            'type' => $type,
+            'thumb' => $thumb,
         ];
     }
 
@@ -112,7 +124,7 @@ class FileService
 
     public function getFilePathById(int $upload_id): string
     {
-        if(empty($upload_id)){
+        if (empty($upload_id)) {
             return '';
         }
         $path = \Hyperf\DbConnection\Db::table('sys_upload')
@@ -126,7 +138,7 @@ class FileService
 
     public function getFileInfoById(int $upload_id): object|null
     {
-        if(empty($upload_id)){
+        if (empty($upload_id)) {
             return null;
         }
         $file = \Hyperf\DbConnection\Db::table('sys_upload')
@@ -142,7 +154,7 @@ class FileService
 
     public function getFilepathByIds(array $upload_ids): array
     {
-        if(empty($upload_ids)){
+        if (empty($upload_ids)) {
             return [];
         }
         $files = \Hyperf\DbConnection\Db::table('sys_upload')
@@ -160,7 +172,7 @@ class FileService
 
     public function getFileInfoByIds(array $upload_ids): array
     {
-        if(empty($upload_ids)){
+        if (empty($upload_ids)) {
             return [];
         }
         $files = \Hyperf\DbConnection\Db::table('sys_upload')

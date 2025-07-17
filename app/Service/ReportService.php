@@ -4,6 +4,8 @@ namespace App\Service;
 
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
+use App\Constants\PrestigeCate;
+use App\Constants\ReferType;
 use App\Constants\ReportReason;
 use App\Constants\ReportType;
 use App\Exception\LogicException;
@@ -20,6 +22,9 @@ class ReportService
 
     #[Inject]
     protected CommentService $commentService;
+
+    #[Inject]
+    protected CreditService $creditService;
 
     public function getAuditList(array $params = []): array
     {
@@ -107,6 +112,7 @@ class ReportService
                     'is_reported' => 1,
                 ]);
             }
+            $this->reportSuccess((array) $report);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -135,6 +141,44 @@ class ReportService
             throw new LogicException($ex->getMessage());
         }
         return true;
+    }
+
+    public function report(int $user_id, ReportType $report_type, array $params):int
+    {
+        if($report_type == ReportType::POST){
+            $content = Db::table('post')->where(['id'=>$params['post_id']])->first(['id, user_id']);
+        }elseif ($report_type == ReportType::COMMENT){
+            $content = Db::table('comment')->where(['id'=>$params['comment_id']])->first(['id, user_id']);
+        }else{
+            throw new LogicException('举报类型错误');
+        }
+        if(empty($content)){
+            throw new LogicException('举报内容不存在');
+        }
+        $report_id = Db::table('report')->insertGetId([
+            'user_id' => $user_id,
+            'report_type' => $report_type,
+            'content_id' => $params['content_id'],
+            'content_user_id' => $content->user_id,
+            'report_reason' => $params['report_reason'],
+            'description' => $params['description'] ?? '',
+            'images' => empty($params['images']) ? '' : implode(',', $params['images']),
+            'audit_status' => AuditStatus::PENDING->value,
+            'create_time' => date('Y-m-d H:i:s'),
+            'update_time' => date('Y-m-d H:i:s'),
+        ]);
+        return $report_id;
+    }
+
+    protected function reportSuccess(array $report)
+    {
+        $refer_type = match ($report['report_type']){
+            ReportType::POST->value => ReferType::POST->value,
+            ReportType::COMMENT->value => ReferType::COMMENT->value,
+            default => throw new LogicException('举报类型错误')
+        };
+        // 声望
+        $this->creditService->finishPrestigeTask($report['user_id'], PrestigeCate::REPORT, $report['id'], '举报成功', $refer_type);
     }
 
 }

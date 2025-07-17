@@ -8,8 +8,8 @@ class PostsRequest extends FormRequest
 {
     protected array $scenes = [
         'id' => ['post_id'],
-        'publish' => ['post_type', 'circle_id', 'title', 'content', 'media'],
-        'update' => ['post_id', 'circle_id', 'title', 'content', 'media'],
+        'publish' => ['post_type', 'circle_id', 'title', 'content', 'media', 'media_type'],
+        'update' => ['post_id', 'circle_id', 'title', 'content', 'media', 'media_type'],
     ];
 
     /**
@@ -33,6 +33,7 @@ class PostsRequest extends FormRequest
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'media' => 'array',
+            'media_type' => 'in:1,2'
         ];
     }
 

@@ -12,7 +12,9 @@ ReportRequest extends FormRequest
     protected array $scenes = [
         'id' => ['report_id'],
         'reject' => ['report_id','reject_reason'],
-        'pass' => ['report_id', 'mute_time']
+        'pass' => ['report_id', 'mute_time'],
+        'post_report' => ['post_id', 'report_reason', 'description', 'images'],
+        'comment_report' => ['comment_id', 'report_reason', 'description', 'images']
     ];
 
     /**
@@ -32,6 +34,11 @@ ReportRequest extends FormRequest
             'report_id' => 'required|integer',
             'mute_time' => 'integer',
             'reject_reason' => 'required|string',
+            'report_reason' => 'required|integer',
+            'description' => 'required|string',
+            'images' => 'array',
+            'post_id' => 'required|integer',
+            'comment_id' => 'required|integer',
         ];
     }
 
@@ -44,6 +51,15 @@ ReportRequest extends FormRequest
             'mute_time.integer' => '禁言时间必须为整数',
             'reject_reason.required' => '拒绝理由不能为空',
             'reject_reason.string' => '拒绝理由必须为字符串',
+            'report_reason.required' => '举报原因不能为空',
+            'report_reason.integer' => '举报原因必须为整数',
+            'description.required' => '举报描述不能为空',
+            'description.string' => '举报描述必须为字符串',
+            'images.array' => '图片必须为数组',
+            'post_id.required' => '帖子ID不能为空',
+            'post_id.integer' => '帖子ID必须为整数',
+            'comment_id.required' => '评论ID不能为空',
+            'comment_id.integer' => '评论ID必须为整数',
         ];
 
     }

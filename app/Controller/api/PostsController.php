@@ -4,11 +4,14 @@ namespace App\Controller\api;
 
 use App\Constants\AuditStatus;
 use App\Constants\PostType;
+use App\Constants\ReportType;
 use App\Controller\AbstractController;
 use App\Library\Contract\AuthTokenInterface;
 use App\Middleware\ApiMiddleware;
 use App\Request\PostsRequest;
+use App\Request\ReportRequest;
 use App\Service\PostsService;
+use App\Service\ReportService;
 use App\Service\UserFollowService;
 use App\Service\UserViewRecordService;
 use Hyperf\Di\Annotation\Inject;
@@ -103,5 +106,27 @@ class PostsController extends AbstractController
         $params['view_type'] = $viewService->getPostViewType($params['post_type']);
         $list = $this->service->viewList($user_id, $params);
         return returnSuccess($list);
+    }
+
+    #[Middleware(ApiMiddleware::class)]
+    public function share()
+    {
+        $user_id = $this->request->getAttribute('user_id');
+        $post_id = $this->request->input('post_id');
+        if(empty($post_id)){
+            return returnError('参数错误');
+        }
+        $this->service->share($user_id, $post_id);
+        return returnSuccess();
+    }
+
+    #[Middleware(ApiMiddleware::class)]
+    #[Scene('post_report')]
+    public function report(ReportRequest $request, ReportService $reportService)
+    {
+        $data = $request->validated();
+        $user_id = $this->request->getAttribute('user_id');
+        $reportService->report($user_id, ReportType::POST, $data);
+        return returnSuccess();
     }
 }

@@ -149,10 +149,26 @@ if (!function_exists('generateMulFileUrl')) {
         }
         $result = [];
         foreach ($arr as $url) {
-            $result[] = [
+            $item = [
                 'path' => $url,
                 'url' => generateFileUrl($url),
+                'type' => 'file', // default type
+                'thumb' => '',
             ];
+            $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
+            $extension = strtolower($extension);
+            $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg'];
+            $videoExtensions = ['mp4', 'avi', 'wmv', 'flv', 'mkv', 'mov', 'mpg', 'mpeg', 'webm', 'm4v', '3gp', 'ogv', 'ogg', 'mts'];
+
+            if (in_array($extension, $imageExtensions)) {
+                $item['type'] = 'image';
+            } elseif (in_array($extension, $videoExtensions)) {
+                $item['type'] = 'video';
+                $coverUrl = $url . '?x-oss-process=video/snapshot,t_1000,f_jpg,w_0,h_0,m_fast';
+                $item['thumb'] = generateFileUrl($coverUrl);
+            }
+
+            $result[] = $item;
         }
         return $result;
     }

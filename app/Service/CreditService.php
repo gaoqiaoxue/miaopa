@@ -61,18 +61,18 @@ class CreditService
     }
 
     #[CacheEvict(prefix: 'user_credit', value: "_#{user_id}")]
-    public function setCoin(int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = ''): bool
+    public function setCoin(int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = '', int $refer_type = 0, int $refer_uid = 0): bool
     {
-        return $this->setCreditLog('coin', $user_id, $num, $cate, $refer_id, $remark);
+        return $this->setCreditLog('coin', $user_id, $num, $cate, $refer_id, $remark, $refer_type, $refer_uid);
     }
 
     #[CacheEvict(prefix: 'user_credit', value: "_#{user_id}")]
-    public function setPrestige(int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = ''): bool
+    public function setPrestige(int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = '', int $refer_type = 0, int $refer_uid = 0): bool
     {
-        return $this->setCreditLog('prestige', $user_id, $num, $cate, $refer_id, $remark);
+        return $this->setCreditLog('prestige', $user_id, $num, $cate, $refer_id, $remark, $refer_type, $refer_uid);
     }
 
-    protected function setCreditLog(string $field, int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = ''): bool
+    protected function setCreditLog(string $field, int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = '', int $refer_type = 0, int $refer_uid = 0): bool
     {
         if ($num == 0) {
             return true;
@@ -95,7 +95,9 @@ class CreditService
                 'type' => $num > 0 ? 1 : 2,
                 'num' => $num,
                 'cate' => $cate,
+                'refer_type' => $refer_type,
                 'refer_id' => $refer_id,
+                'refer_uid' => $refer_uid,
                 'remark' => $remark,
                 'create_time' => date('Y-m-d H:i:s'),
             ]);
@@ -199,17 +201,17 @@ class CreditService
         $setting = $this->configService->getValue('stay_time_config');
         $coin = 0;
         $time = 0;
-        foreach ($setting as $item){
-            if($item['time'] <= $minute && $item['time'] > $has){
+        foreach ($setting as $item) {
+            if ($item['time'] <= $minute && $item['time'] > $has) {
                 $coin = $item['coins'];
                 $time = $item['time'];
                 break;
             }
         }
-        if(empty($coin)){
+        if (empty($coin)) {
             return 0;
         }
-        $this->setCoin($user_id, $coin, CoinCate::STAY->value, 0, '停留时间超过'.$minute.'分钟');
+        $this->setCoin($user_id, $coin, CoinCate::STAY->value, 0, '停留时间超过' . $minute . '分钟');
         $redis->hSet('coin:' . $date . ':' . $user_id, 'stay', $time);
         $time = Carbon::now()->endOfDay()->timestamp - time();
         $redis->expire('coin:' . $date . ':' . $user_id, $time);
@@ -274,7 +276,7 @@ class CreditService
         return $setting;
     }
 
-    public function finishPrestigeTask(int $user_id, PrestigeCate $cate, int $refer_id = 0, string $remark = '', string $date = ''): bool
+    public function finishPrestigeTask(int $user_id, PrestigeCate $cate, int $refer_id = 0, string $remark = '', int $refer_type = 0, int $refer_uid = 0, string $date = ''): bool
     {
         $date = $date ?: date('Y-m-d');
         $redis = redisHandler();
@@ -289,7 +291,7 @@ class CreditService
         if ($user_times >= $times) {
             return true;
         }
-        $this->setPrestige($user_id, $prestige, $cate->value, $refer_id, $remark);
+        $this->setPrestige($user_id, $prestige, $cate->value, $refer_id, $remark, $refer_type, $refer_uid);
         $redis->hIncrBy('prestige:' . $date . ':' . $user_id, $type, 1);
         $time = Carbon::now()->endOfDay()->timestamp - time();
         $redis->expire('prestige:' . $date . ':' . $user_id, $time);

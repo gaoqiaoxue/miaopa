@@ -10,15 +10,16 @@ use App\Service\ActivityService;
 use App\Service\CircleService;
 use App\Service\PostsService;
 use App\Service\UserService;
+use App\Service\XiaohongshuService;
 use Hyperf\HttpServer\Annotation\AutoController;
 
 #[AutoController]
 class IndexController extends AbstractController
 {
-    public function index(MapWebInterface $service)
+    public function index(XiaohongshuService $service)
     {
         return [
-            'data' => $this->request->all()
+            'data' => $service->searchNotes('动漫')
         ];
     }
 

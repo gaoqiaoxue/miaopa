@@ -4,7 +4,10 @@ namespace App\Service;
 
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
+use App\Constants\CoinCate;
 use App\Constants\PostType;
+use App\Constants\PrestigeCate;
+use App\Constants\ReferType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
@@ -14,6 +17,9 @@ class CommentService
 {
     #[Inject]
     protected AuditService $auditService;
+
+    #[Inject]
+    protected CreditService $creditService;
 
     public function getList(array $params): array
     {
@@ -128,13 +134,13 @@ class CommentService
     // 评论
     public function comment(int $user_id, int $post_id, string $content, array $images = [])
     {
-        $post = Db::table('post')->where(['id' => $post_id])->first(['id', 'post_type']);
+        $post = Db::table('post')->where(['id' => $post_id])->first(['id', 'user_id', 'post_type']);
         if (empty($post)) {
             throw new LogicException('帖子不存在');
         }
         Db::beginTransaction();
         try {
-            $comment_id = Db::table('comment')->insertGetId([
+            $comment = [
                 'user_id' => $user_id,
                 'post_id' => $post_id,
                 'post_type' => $post->post_type,
@@ -143,15 +149,28 @@ class CommentService
                 'audit_status' => AuditStatus::PENDING->value,
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s')
-            ]);
+            ];
+            $comment_id = Db::table('comment')->insertGetId($comment);
+            $comment['id'] = $comment_id;
             $this->auditService->addAuditRecord(AuditType::COMMENT->value, $comment_id, $user_id);
             Db::table('post')->where('id', $post_id)->increment('comment_count', 1);
+            $this->commentSuccess($user_id, $comment, (array)$post);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
         return true;
+    }
+
+    // 评论成功奖励
+    protected function commentSuccess(int $user_id, array $comment, array $post)
+    {
+        // 金币奖励
+        $this->creditService->finishCoinTask($user_id, CoinCate::COMMENT, $comment['id'], '参与讨论');
+        // 声望
+        $this->creditService->finishPrestigeTask($post['user_id'], PrestigeCate::BE_COMMENTED, $comment['id'], '被回复', ReferType::COMMENT->value, $user_id);
+        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment['id'], '回复', ReferType::COMMENT->value);
     }
 
     // 回复
@@ -190,7 +209,7 @@ class CommentService
         }
         Db::beginTransaction();
         try {
-            $comment_id = Db::table('comment')->insertGetId([
+            $current_comment = [
                 'user_id' => $user_id,
                 'post_id' => $comment->post_id,
                 'post_type' => $comment->post_type,
@@ -202,15 +221,28 @@ class CommentService
                 'audit_status' => AuditStatus::PENDING->value,
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s')
-            ]);
+            ];
+            $comment_id = Db::table('comment')->insertGetId($current_comment);
+            $current_comment['id'] = $comment_id;
             $this->auditService->addAuditRecord(AuditType::COMMENT->value, $comment_id, $user_id);
             Db::table('comment')->where('id', $comment->post_id)->increment('reply_count', 1);
+            $this->replySuccess($user_id, $current_comment, empty($at_user_id) ? $comment->user_id : $at_user_id);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
         return true;
+    }
+
+    // 回复成功奖励
+    protected function replySuccess(int $user_id, array $comment, int $be_commented_uid)
+    {
+        // 金币奖励
+        $this->creditService->finishCoinTask($user_id, CoinCate::COMMENT, $comment['id'], '参与讨论');
+        // 声望
+        $this->creditService->finishPrestigeTask($be_commented_uid, PrestigeCate::BE_COMMENTED, $comment['id'], '被回复', ReferType::COMMENT->value, $user_id);
+        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment['id'], '回复', ReferType::COMMENT->value);
     }
 
     public function getCommentList(array $params, int $user_id, array $cate = []): array
@@ -289,9 +321,9 @@ class CommentService
             $item->image_urls = generateMulFileUrl($item->images);
         }
         if (in_array('is_like', $cate)) {
-            if(isset($params['like_ids'])){
+            if (isset($params['like_ids'])) {
                 $item->is_like = in_array($item->id, $params['like_ids']) ? 1 : 0;
-            }else{
+            } else {
                 $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
             }
         }
@@ -305,6 +337,10 @@ class CommentService
         if ((empty($has) && $status == 0) || (!empty($has) && $status == 1)) {
             return true;
         }
+        $comment = Db::table('comment')->where(['id' => $comment_id])->first(['id', 'user_id', 'content']);
+        if (empty($comment)) {
+            throw new LogicException('评论不存在');
+        }
         Db::beginTransaction();
         try {
             if ($status == 1) {
@@ -314,6 +350,7 @@ class CommentService
                     'create_time' => date('Y-m-d H:i:s'),
                 ]);
                 $res2 = Db::table('comment')->where('id', '=', $comment_id)->increment('like_count');
+                $this->likeSuccess($user_id, $comment);
             } else {
                 $res1 = Db::table('comment_like')
                     ->where(['comment_id' => $comment_id, 'user_id' => $user_id])
@@ -321,6 +358,7 @@ class CommentService
                 $res2 = Db::table('comment')->where('id', '=', $comment_id)->decrement('like_count');
             }
             if (!$res1 || !$res2) {
+                Db::rollBack();
                 throw new LogicException('操作失败');
             }
             Db::commit();
@@ -329,6 +367,14 @@ class CommentService
             throw new ParametersException($ex->getMessage());
         }
         return true;
+    }
+
+    // 点赞成功奖励
+    protected function likeSuccess(int $user_id, object $comment)
+    {
+        // 声望
+        $this->creditService->finishPrestigeTask($comment->user_id, PrestigeCate::BE_LIKED, $comment->id, '获赞', ReferType::COMMENT->value, $user_id);
+        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::LIKE, $comment->id, '点赞', ReferType::COMMENT->value);
     }
 
     public function checkIsLike(int $comment_id, int $user_id): int
@@ -344,7 +390,7 @@ class CommentService
 
     public function getUserCommentLikes(int $user_id, array $comment_ids): array
     {
-        if(empty($comment_ids) || empty($user_id)) {
+        if (empty($comment_ids) || empty($user_id)) {
             return [];
         }
         return Db::table('comment_like')
@@ -353,5 +399,23 @@ class CommentService
             ->pluck('comment_id')
             ->toArray();
 
+    }
+
+    public function answerShare(int $user_id, int $answer_id): bool
+    {
+        Db::beginTransaction();
+        try {
+            Db::table('post_share')->insert([
+                'user_id' => $user_id,
+                'answer_id' => $answer_id,
+                'create_time' => date('Y-m-d H:i:s'),
+            ]);
+            $this->creditService->finishPrestigeTask($user_id, PrestigeCate::SHARE, $answer_id, '答案分享', ReferType::COMMENT->value);
+            Db::commit();
+        } catch (\Throwable $ex) {
+            Db::rollBack();
+            throw new ParametersException($ex->getMessage());
+        }
+        return true;
     }
 }

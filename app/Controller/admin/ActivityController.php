@@ -29,7 +29,7 @@ class ActivityController extends AbstractController
     public function getInfo(ActivityRequest $request): array
     {
         $activity_id = $request->input('activity_id', 0);
-        $activity = $this->service->getInfo($activity_id,['creater']);
+        $activity = $this->service->getInfo($activity_id,['creater', 'city']);
         return returnSuccess($activity);
     }
 
