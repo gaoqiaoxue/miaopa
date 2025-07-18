@@ -11,15 +11,40 @@ use App\Service\CircleService;
 use App\Service\PostsService;
 use App\Service\UserService;
 use App\Service\XiaohongshuService;
+use Hyperf\DbConnection\Db;
 use Hyperf\HttpServer\Annotation\AutoController;
 
 #[AutoController]
 class IndexController extends AbstractController
 {
-    public function index(XiaohongshuService $service)
+    public function xhs_list(XiaohongshuService $service)
+    {
+        $params = $this->request->all();
+        return [
+            'data' => $service->searchAndSave($params['keyword'],$params['page'],$params['page_size'] ?? 20)
+        ];
+    }
+
+    public function xhs_get()
     {
         return [
-            'data' => $service->searchNotes('动漫')
+            'data' => Db::table('xhs_notes')
+                ->where('is_detail',0)
+                ->limit(5)
+                ->get(['note_id','note_url'])
+        ];
+    }
+
+    public function xhs(XiaohongshuService $service)
+    {
+        $params = $this->request->all();
+//        foreach ($params['input'] as $param){
+            $service->saveCozeData($params['input']);
+//        }
+        sleep(2);
+//        logGet('xiaohongshu')->info(json_encode($params['input']));
+        return [
+            'data' => $params
         ];
     }
 
