@@ -25,7 +25,7 @@ class XiaohongshuService
             'keyword' => $keyword,
             'page' => $page,
             'page_size' => $pageSize,
-            'search_id' => uniqid() . substr(md5((string) time()), 0, 16),
+            'search_id' => uniqid() . substr(md5((string)time()), 0, 16),
             'sort' => 'general',
             'note_type' => 0,
             'ext_flags' => [],
@@ -105,7 +105,7 @@ class XiaohongshuService
     private function saveNote(array $items, string $keyword): void
     {
         foreach ($items as $item) {
-            if(!isset($item['note_card']) || !isset($item['id'])){
+            if (!isset($item['note_card']) || !isset($item['id'])) {
                 continue;
             }
             $noteId = $item['id'];
@@ -116,7 +116,7 @@ class XiaohongshuService
             Db::table('xhs_notes')->insert([
                 'note_id' => $noteId,
                 'keyword' => $keyword,
-                'note_url' => 'https://www.xiaohongshu.com/explore/'.$noteId.'?xsec_token='.$item['xsec_token'],
+                'note_url' => 'https://www.xiaohongshu.com/explore/' . $noteId . '?xsec_token=' . $item['xsec_token'],
                 'cover_url' => $item['note_card']['cover']['url_default'] ?? ''
             ]);
         }
@@ -124,9 +124,17 @@ class XiaohongshuService
 
     public function saveCozeData(array $param)
     {
+        if (empty($param['note_id'])) {
+            if (empty($param['org_note_id'])) {
+                return;
+            }
+            $noteId = $param['org_note_id'];
+            Db::table('xhs_notes')->where('note_id', $noteId)->update(['is_detail' => 2]);
+            return;
+        }
         $noteId = $param['note_id'];
-        is_array($param['note_image_list']) && $param['note_image_list'] = implode(',',$param['note_image_list']);
-        is_array($param['note_tags']) && $param['note_tags'] = implode(',',$param['note_tags']);
+        is_array($param['note_image_list']) && $param['note_image_list'] = implode(',', $param['note_image_list']);
+        is_array($param['note_tags']) && $param['note_tags'] = implode(',', $param['note_tags']);
         $data = [
             'note_id' => $param['note_id'],
             'auther_user_id' => $param['auther_user_id'],
@@ -152,7 +160,7 @@ class XiaohongshuService
         ];
         if (Db::table('xhs_notes')->where('note_id', $noteId)->count()) {
             Db::table('xhs_notes')->where('note_id', $noteId)->update($data);
-        }else{
+        } else {
             Db::table('xhs_notes')->insert($data);
         }
     }

@@ -16,6 +16,7 @@ use App\Constants\Sex;
 use App\Constants\VirtualType;
 use App\Controller\AbstractController;
 use App\Library\Contract\MapWebInterface;
+use App\Service\ConfigService;
 use App\Service\FileService;
 use App\Service\RegionService;
 use Hyperf\HttpServer\Annotation\AutoController;
@@ -91,5 +92,16 @@ class BasicController extends AbstractController
         return returnSuccess($info);
     }
 
+    /**
+     * 获取用户协议
+     * @param ConfigService $configService
+     * @return array
+     */
+    public function agreement(ConfigService $configService): array
+    {
+        $key = $this->request->input('key', 'user_agreement');
+        $config = $configService->getValue($key);
+        return returnSuccess($config);
+    }
 
 }

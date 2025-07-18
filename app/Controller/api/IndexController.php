@@ -27,10 +27,14 @@ class IndexController extends AbstractController
 
     public function xhs_get()
     {
+        $params = $this->request->all();
+        var_dump($params);
+        $limit = is_numeric($params['input']) ? $params['input'] : 20;
         return [
             'data' => Db::table('xhs_notes')
                 ->where('is_detail',0)
-                ->limit(5)
+                ->limit($limit)
+//                ->orderByDesc('id')
                 ->get(['note_id','note_url'])
         ];
     }
@@ -41,7 +45,9 @@ class IndexController extends AbstractController
 //        foreach ($params['input'] as $param){
             $service->saveCozeData($params['input']);
 //        }
-        sleep(2);
+        $s = rand(25,40);
+        var_dump($s);
+        sleep($s);
 //        logGet('xiaohongshu')->info(json_encode($params['input']));
         return [
             'data' => $params

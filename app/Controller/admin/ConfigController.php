@@ -43,4 +43,10 @@ class ConfigController extends AbstractController
         return returnSuccess();
     }
 
+    #[Scene('set_agreement')]
+    public function setAgreement(ConfigRequest $request){
+        $params = $request->validated();
+        $this->service->update($params);
+        return returnSuccess();
+    }
 }

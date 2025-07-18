@@ -11,6 +11,7 @@ class ConfigRequest extends FormRequest
     protected array $scenes = [
         'publish' => ['post_publish_type', 'comment_publish_type', 'report_publish_type'],
         'coins' => ['daily_sign_coins', 'continuous_sign_config', 'post_coins', 'comment_coins', 'activity_coins', 'stay_time_config'],
+        'set_agreement' => ['user_agreement', 'privacy_policy']
     ];
 
     /**
@@ -36,6 +37,8 @@ class ConfigRequest extends FormRequest
             'comment_coins' => 'required|integer',
             'activity_coins' => 'required|integer',
             'stay_time_config' => 'array',
+            'user_agreement' => 'required',
+            'privacy_policy' => 'required',
         ];
     }
 
@@ -58,6 +61,8 @@ class ConfigRequest extends FormRequest
             'activity_coins.required' => '报名一次漫展领取币数量不能为空',
             'activity_coins.integer' => '报名一次漫展领取币数量必须为整数',
             'stay_time_config.array' => '停留时间配置必须为数组',
+            'user_agreement.require' => '用户协议不能为空',
+            'privacy_policy.require' => '隐私政策不能为空',
         ];
     }
 
