@@ -164,4 +164,54 @@ class XiaohongshuService
             Db::table('xhs_notes')->insert($data);
         }
     }
+
+    // 读取json文件中的数据
+    private function getJsonData($filePath){
+        $jsonData = file_get_contents($filePath);
+        return json_decode($jsonData, true);
+    }
+
+    public function saveJson($filePath)
+    {
+        $data = $this->getJsonData($filePath);
+        foreach ($data as $item) {
+            $item['time'] = date('Y-m-d H:i:s', $item['time']/ 1000);
+            $data = [
+                'note_id' => $item['note_id'],
+                'auther_user_id' => $item['user_id'],
+                'auther_avatar' => $item['avatar'],
+                'auther_home_page_url' => '', // 原数据中没有提供，留空或可根据user_id拼接
+                'auther_nick_name' => $item['nickname'],
+                'note_card_type' => $item['type'],
+                'note_display_title' => $item['title'],
+                'note_desc' => $item['desc'],
+                'note_duration' => 0, // 原数据中没有提供视频时长
+                'note_image_list' => $item['image_list'],
+                'note_model_type' => $item['type'], // 与原数据中的type相同
+                'note_tags' => $item['tag_list'],
+                'note_url' => $item['note_url'],
+                'video_a1_url' => $item['video_url'], // 使用原数据中的video_url
+                'video_h264_url' => '', // 原数据中没有提供
+                'video_h265_url' => '', // 原数据中没有提供
+                'video_h266_url' => '', // 原数据中没有提供
+                'video_id' => '', // 原数据中没有提供
+                'note_create_time' => $item['time'],
+                'keyword' => $item['source_keyword'],
+                'raw_data' => json_encode($item),
+                'is_detail' => 10
+            ];
+            $note_id = $item['note_id'];
+            $has = Db::table('xhs_notes')->where('note_id', $note_id)-> first(['id','is_detail']);
+            if (!empty($has)){
+                if($has->is_detail == 1){
+                    Db::table('xhs_notes')->where(['id' => $has->id])->update(['is_detail' => 11]);
+                }else{
+                    Db::table('xhs_notes')->where(['id' => $has->id])->update($data);
+                }
+            }else{
+                Db::table('xhs_notes')->insert($data);
+            }
+        }
+        return true;
+    }
 }

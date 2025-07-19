@@ -13,6 +13,9 @@ class UserLoginService
     #[Inject]
     protected AuthTokenInterface $authToken;
 
+    #[Inject]
+    protected WechatMiniAppLib $mini_lib;
+
     public function login(array $data): array
     {
         $user = Db::table('user')->where(['username' => $data['username']])->first();
@@ -27,11 +30,10 @@ class UserLoginService
 
     public function wechatMiniAuth(string $code): array
     {
-        $service = new WechatMiniAppLib();
-//        $info = $service->jscode2session($code);
-        $info = [
-            'openid' => 'jhuwienjxkhfoakshd' // TODO
-        ];
+        $info = $this->mini_lib->jscode2session($code);
+//        $info = [
+//            'openid' => 'jhuwienjxkhfoakshd' // TODO
+//        ];
         if (empty($info['openid'])) {
             throw new LogicException('微信授权失败');
         }
@@ -76,6 +78,7 @@ class UserLoginService
         Db::table('user')->where(['id' => $user->id])->update([
             'last_login_time' => date('Y-m-d H:i:s'),
         ]);
+        $token['token'] = 'Bearer '.$token['token'];
         return [
             'user' => $user,
             'token' => $token,
@@ -84,13 +87,12 @@ class UserLoginService
 
     public function wechatMiniGetPhoneNumber(string $code, $core_id): array
     {
-        $mobile = '13500135000'; // TODO
-//        $service = new WechatMiniAppLib();
-//        $info = $service->getPhoneNumber($code);
-//        if (empty($info['phone_info']['phoneNumber'])) {
-//            throw new LogicException('手机号获取失败');
-//        }
-//        $mobile = $info['phone_info']['phoneNumber'];
+//        $mobile = '13500135000'; // TODO
+        $info = $this->mini_lib->getPhoneNumber($code);
+        if (empty($info['phone_info']['phoneNumber'])) {
+            throw new LogicException('手机号获取失败');
+        }
+        $mobile = $info['phone_info']['phoneNumber'];
         return $this->bindMobile('wechatmini', $mobile, $core_id);
     }
 

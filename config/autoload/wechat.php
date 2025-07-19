@@ -51,8 +51,8 @@ return [
         ],
     ],
     'miniapp' => [
-        'app_id' => 'wx3cf0f39249eb0exx',
-        'secret' => 'f1c242f4f28f735d4687abb469072axx',
+        'app_id' => 'wx74e8757ced12940c',
+        'secret' => '58748f7a531acea8418aec65db5f7b78',
         'token' => '',
         'aes_key' => '',
 

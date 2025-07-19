@@ -2,9 +2,11 @@
 
 namespace App\Service;
 
+use App\Constants\IsRisky;
 use App\Constants\Sex;
 use App\Exception\LogicException;
 use App\Library\Contract\AuthTokenInterface;
+use App\Library\WechatMiniAppLib;
 use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
@@ -16,6 +18,12 @@ class UserService
 
     #[Inject]
     protected UserFollowService $followService;
+
+    #[Inject]
+    protected WechatMiniAppLib $mini_lib;
+
+    #[Inject]
+    protected MediaAuditService $mediaAuditService;
 
     public function getList(array $params): array
     {
@@ -151,5 +159,74 @@ class UserService
             $this->objectTransformer($item, [], $params);
         }
         return $list;
+    }
+
+    public function changInfo(int $user_id, array $params)
+    {
+        $arr = [];
+        $user = Db::table('user')->where('id', $user_id)->first();
+        $wx_core = Db::table('user_core')
+            ->where(['user_id' => $user_id, 'source' => 'wechatmini'])
+            ->first();
+        $msg = '';
+        if (!empty($params['nickname']) && $params['nickname'] != $user->nickname) {
+            if (!empty($wx_core) && $this->mini_lib->msgSecCheck($params['nickname'], $wx_core->openid)) {
+                return ['code' => 0, 'msg' => '昵称包含敏感词'];
+            }
+            $arr['nickname'] = $params['nickname'];
+        }
+        if (!empty($params['signature']) && $params['signature'] != $user->signature) {
+            if (!empty($wx_core) && $this->mini_lib->msgSecCheck($params['signature'], $wx_core->openid)) {
+                return ['code' => 0, 'msg' => '昵称包含敏感词'];
+            }
+            $arr['signature'] = $params['signature'];
+        }
+        if(isset($params['sex']) && in_array($params['sex'], Sex::getKeys())){
+            $arr['sex'] = $params['sex'];
+        }
+        if(!empty($params['region_id']) && $params['region_id'] != $user->region_id){
+            $region = Db::table('sys_region')->where('id', $params['region_id'])->value('name');
+            if(empty($region)){
+                return ['code' => 0, 'msg' => '地区不存在'];
+            }
+            $arr['region'] = $region;
+            $arr['region_id'] = $params['region_id'];
+        }
+        if(!empty($params['school']) && $params['school'] != $user->school){
+            $arr['school'] = $params['school'];
+        }
+        if (!empty($params['avatar']) && $params['avatar'] != $user->avatar) {
+            if (!empty($wx_core)) {
+                $check = $this->mediaAuditService->addMediaAudit($user_id, $wx_core->openid, $params['avatar'], 'avatar', $user_id);
+                if($check == IsRisky::SAFE->value){
+                    $arr['avatar'] = $params['avatar'];
+                }elseif ($check == IsRisky::RISKY->value){
+                    return ['code' => 0, 'msg' => "头像未通过审核，请更换照片"];
+                }else{
+                    $msg = '图片审核中';
+                }
+            } else {
+                $arr['avatar'] = $params['avatar'];
+            }
+        }
+        if (!empty($params['bg']) && $params['bg'] != $user->bg) {
+            if (!empty($wx_core)) {
+                $check = $this->mediaAuditService->addMediaAudit($user_id, $wx_core->openid, $params['bg'], 'bg', $user_id);
+                if($check == IsRisky::SAFE->value){
+                    $arr['bg'] = $params['bg'];
+                }elseif ($check == IsRisky::RISKY->value){
+                    return ['code' => 0, 'msg' => "背景图未通过审核，请更换照片"];
+                }else{
+                    $msg = '图片审核中';
+                }
+            } else {
+                $arr['bg'] = $params['bg'];
+            }
+        }
+        if(empty($arr)){
+            return ['code' => 0, 'msg' => '没有需要修改的项'];
+        }
+        Db::table('user')->where('id', $user_id)->update($arr);
+        return ['code' => 1, 'msg' => empty($msg) ? '修改成功' : $msg];
     }
 }

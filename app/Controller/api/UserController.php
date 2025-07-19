@@ -36,7 +36,13 @@ class UserController extends AbstractController
     #[Middleware(ApiMiddleware::class)]
     public function changInfo()
     {
-            // TODO
+        $params = $this->request->all();
+        $user_id = $this->request->getAttribute('user_id');
+        $res = $this->service->changInfo($user_id, $params);
+        if ($res['code'] == 0) {
+            return returnError($res['msg']);
+        }
+        return returnSuccess([],$res['msg']);
     }
 
     public function userHomePage(AuthTokenInterface $authToken)

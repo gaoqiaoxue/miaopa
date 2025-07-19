@@ -24,6 +24,7 @@ class WechatMiniAppLib
         try {
             return $this->app->getUtils()->codeToSession($code);
         } catch (\Throwable $e) {
+            logGet('jscode2session','wxmini')->debug($e->getMessage());
             throw new ParametersException($e->getMessage());
         }
     }
@@ -36,6 +37,7 @@ class WechatMiniAppLib
                 'code' => $code
             ]);
         } catch (\Throwable $e) {
+            logGet('getPhoneNumber','wxmini')->debug($e->getMessage());
             throw new ParametersException($e->getMessage());
         }
     }
@@ -52,6 +54,7 @@ class WechatMiniAppLib
             ]);
             return $response->saveAs($save_url);
         } catch (\Throwable $e) {
+            logGet('getwxacodeunlimit','wxmini')->debug($e->getMessage());
             throw new ParametersException($e->getMessage());
         }
     }
@@ -82,14 +85,14 @@ class WechatMiniAppLib
     }
 
     // 多媒体内容安全识别
-    public function mediaCheckAsync($mediaUrl,$openid,$mediaType = 2)
+    public function mediaCheckAsync($mediaUrl,$openid, $scene = 1, $mediaType = 2)
     {
         try {
             $result = $this->app->getClient()->postJson('wxa/media_check_async', [
                 'media_url' => $mediaUrl,
                 'media_type' => $mediaType, // 1:音频;2:图片
                 'version' => '2',
-                'scene' => '1', // 1 资料；2 评论；3 论坛；4 社交日志
+                'scene' => $scene, // 1 资料；2 评论；3 论坛；4 社交日志
                 'openid' => $openid
             ]);
             if($result['errcode'] == 0) {

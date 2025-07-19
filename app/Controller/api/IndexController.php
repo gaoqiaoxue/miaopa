@@ -2,12 +2,13 @@
 
 namespace App\Controller\api;
 
+use App\Constants\IsRisky;
 use App\Constants\PostType;
 use App\Controller\AbstractController;
 use App\Library\Contract\AuthTokenInterface;
-use App\Library\Contract\MapWebInterface;
 use App\Service\ActivityService;
 use App\Service\CircleService;
+use App\Service\MediaAuditService;
 use App\Service\PostsService;
 use App\Service\UserService;
 use App\Service\XiaohongshuService;
@@ -17,11 +18,22 @@ use Hyperf\HttpServer\Annotation\AutoController;
 #[AutoController]
 class IndexController extends AbstractController
 {
+    public function test()
+    {
+        $data = $this->request->getHeader('core_id');
+
+        return [
+            'data' => $data
+        ];
+    }
+
     public function xhs_list(XiaohongshuService $service)
     {
         $params = $this->request->all();
+        $file_path = BASE_PATH.'/data/search_contents_2025-07-19-1.json';
         return [
-            'data' => $service->searchAndSave($params['keyword'],$params['page'],$params['page_size'] ?? 20)
+            'data' => $service->saveJson($file_path)
+//            'data' => $service->searchAndSave($params['keyword'],$params['page'],$params['page_size'] ?? 20)
         ];
     }
 
@@ -76,6 +88,20 @@ class IndexController extends AbstractController
             'dynamic' => $postsService->getApiList(['keyword' => $keyword, 'post_type' => PostType::DYNAMIC->value,'current_user_id' => $user_id],false, 6),
         ];
         return returnSuccess($result);
+    }
+
+    public function wxnotity(MediaAuditService $mediaAuditService){
+        $param = $this->request->all();
+        logGet('wxnotity','wxmini')->debug(json_encode($param));
+        if(isset($param['echostr'])) {
+            return $param['echostr'];
+        }elseif (isset($param['MsgType']) && $param['MsgType'] == 'event' && $param['Event'] == 'wxa_media_check') {
+            $trace_id = $param['trace_id'];
+            $is_risky = isset($param['result']['suggest']) && $param['result']['suggest'] == 'pass'  ? IsRisky::SAFE->value : IsRisky::RISKY->value;
+            $mediaAuditService->updateMediaAudit($trace_id,$is_risky);
+            return 'success';
+        }
+        return 'fail';
     }
 
 }
