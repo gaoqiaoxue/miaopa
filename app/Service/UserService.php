@@ -110,6 +110,14 @@ class UserService
         return $user;
     }
 
+    #[Cacheable(prefix: 'user:info:', ttl: 60)]
+    public function getAuthUserInfo(int $id)
+    {
+        $columns  = ['id', 'username', 'nickname', 'avatar', 'mobile'];
+        $user = Db::table('user')->where(['id' => $id])->select($columns)->first();
+        return $user;
+    }
+
     protected function objectTransformer(object $item, array $cate = [], array $params = [])
     {
         if (property_exists($item, 'avatar')) {

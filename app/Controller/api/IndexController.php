@@ -20,10 +20,15 @@ class IndexController extends AbstractController
 {
     public function test()
     {
-        $data = $this->request->getHeader('core_id');
-
+        $nickname = '';
+        for ($i = 0; $i < 6; $i++) {
+            $nickname .= chr(mt_rand(97, 122));
+        }
+        $data = $this->request->getHeaders();
+//        $core_id = $this->request->getHeaderLine('coreId');
         return [
-            'data' => $data
+            'data' => $data,
+            'core_id' => $nickname,
         ];
     }
 

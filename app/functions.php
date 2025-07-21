@@ -112,9 +112,9 @@ if (!function_exists('arrayToTree')) {
 }
 
 if(!function_exists('getAvatar')){
-    function getAvatar(mixed $avatar): string
+    function getAvatar(mixed $avatar, $source = 'api'): string
     {
-        if (empty($avatar)) {
+        if (empty($avatar) && $source != 'api') {
             return \Hyperf\Support\env('FILE_HOST') . '/uploads/default_avatar.png';
         }else {
             return generateFileUrl($avatar);

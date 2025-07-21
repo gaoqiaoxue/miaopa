@@ -106,7 +106,7 @@ class UserLoginService
             $user = $has_user;
             $has_core = Db::table('user_core')
                 ->where('user_id', '=', $user->id)
-                ->where('source', '=', 'wechatmini')
+                ->where('source', '=', $source)
                 ->first();
             if (!empty($has_core) && $has_core->id != $core_id) {
                 throw new LogicException('手机号已绑定其他账号');
@@ -118,7 +118,7 @@ class UserLoginService
                 $user = [
                     'name' => '',
                     'username' => $mobile,
-                    'nickname' => '',
+                    'nickname' => $this->getNickname(),
                     'mobile' => $mobile,
                     'avatar' => '',
                     'create_time' => date('Y-m-d H:i:s'),
@@ -135,6 +135,15 @@ class UserLoginService
             $user['id'] = $user_id;
             return $this->returnLoginData((object)$user);
         }
+    }
+
+    private function getNickname()
+    {
+        $nickname = '';
+        for ($i = 0; $i < 6; $i++) {
+            $nickname .= chr(mt_rand(97, 122));
+        }
+        return $nickname;
     }
 
     public function refreshToken(): array

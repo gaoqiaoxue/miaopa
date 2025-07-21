@@ -25,13 +25,15 @@ class UserController extends AbstractController
         return returnSuccess($result);
     }
 
-    public function myProfile(AuthTokenInterface $authToken)
+    #[Middleware(ApiMiddleware::class)]
+    public function myProfile()
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
-        if(empty($user_id)){
-            return returnSuccess([],'用户未登录');
-        }
+//        $payload = $authToken->getUserData('default', false);
+//        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+//        if(empty($user_id)){
+//            return returnSuccess([],'用户未登录');
+//        }
+        $user_id = $this->request->getAttribute('user_id');
         $user = $this->service->getInfo($user_id);
         return returnSuccess($user);
     }

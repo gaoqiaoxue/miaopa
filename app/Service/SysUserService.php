@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Constants\AbleStatus;
 use App\Exception\LogicException;
 use App\Library\Contract\AuthTokenInterface;
+use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
@@ -34,7 +35,7 @@ class SysUserService
             'user_name' => $user->user_name,
             'nick_name' => $user->nick_name,
             'avatar' => $user->avatar,
-            'avatar_url' => getAvatar($user->avatar),
+            'avatar_url' => getAvatar($user->avatar, 'admin'),
             'role_id' => $role->role_id,
             'role_name' => $role->role_name,
         ];
@@ -101,7 +102,18 @@ class SysUserService
         if (!$user) {
             throw new LogicException('用户不存在');
         }
-        $user->avatar_url = getAvatar($user->avatar);
+        $user->avatar_url = getAvatar($user->avatar, 'admin');
+        return $user;
+    }
+
+    #[Cacheable(prefix: 'sys_user:info:', ttl: 60)]
+    public function getAuthUserInfo(int $user_id)
+    {
+        $columns  = ['user_id', 'nick_name', 'user_name', 'status'];
+        $user = Db::table('sys_user')
+            ->where(['user_id' => $user_id, 'del_flag' => 0])
+            ->select($columns)
+            ->first();
         return $user;
     }
 
