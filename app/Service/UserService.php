@@ -224,7 +224,11 @@ class UserService
             }
         }
         if(empty($arr)){
-            return ['code' => 0, 'msg' => '没有需要修改的项'];
+            if(empty($msg)){
+                return ['code' => 0, 'msg' => '没有需要修改的项'];
+            }else{
+                return ['code' => 1, 'msg' => $msg];
+            }
         }
         Db::table('user')->where('id', $user_id)->update($arr);
         return ['code' => 1, 'msg' => empty($msg) ? '修改成功' : $msg];

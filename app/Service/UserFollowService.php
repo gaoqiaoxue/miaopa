@@ -12,6 +12,9 @@ class UserFollowService
     #[Inject]
     protected CreditService $creditService;
 
+    #[Inject]
+    protected MessageService $messageService;
+
     public function follow(int $user_id, int $follow_id, int $status): bool
     {
         $has = Db::table('user_follow')
@@ -46,6 +49,8 @@ class UserFollowService
         // 声望
         $this->creditService->finishPrestigeTask($follow_id, PrestigeCate::FANS, $user_id, '被关注');
         $this->creditService->finishPrestigeTask($user_id, PrestigeCate::FOLLOW, $follow_id, '关注');
+        // 用户消息
+        $this->messageService->addFansMessage($follow_id,  $user_id);
     }
 
     public function checkIsFollow(int $user_id, int $follow_id): int

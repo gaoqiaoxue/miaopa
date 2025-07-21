@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
 use App\Constants\CoinCate;
+use App\Constants\MessageCate;
 use App\Constants\PostType;
 use App\Constants\PrestigeCate;
 use App\Constants\ReferType;
@@ -20,6 +21,9 @@ class PostsService
 
     #[Inject]
     protected CreditService $creditService;
+
+    #[Inject]
+    protected MessageService $messageService;
 
     public function getList(array $params): array
     {
@@ -343,6 +347,8 @@ class PostsService
         // 声望
         $this->creditService->finishPrestigeTask($post->user_id, PrestigeCate::BE_LIKED, $post->id, '获赞', ReferType::POST->value, $user_id);
         $this->creditService->finishPrestigeTask($user_id, PrestigeCate::LIKE, $post->id, '点赞', ReferType::POST->value);
+        // 用户消息
+        $this->messageService->addLikeMessage($post->user_id, MessageCate::POST_LIKE->value, ReferType::POST->value, $post->id, $user_id);
     }
 
     public function checkIsLike(int $post_id, int $user_id): int

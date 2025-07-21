@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
 use App\Constants\CoinCate;
+use App\Constants\MessageCate;
 use App\Constants\PostType;
 use App\Constants\PrestigeCate;
 use App\Constants\ReferType;
@@ -20,6 +21,9 @@ class CommentService
 
     #[Inject]
     protected CreditService $creditService;
+
+    #[Inject]
+    protected MessageService $messageService;
 
     public function getList(array $params): array
     {
@@ -171,6 +175,8 @@ class CommentService
         // 声望
         $this->creditService->finishPrestigeTask($post['user_id'], PrestigeCate::BE_COMMENTED, $comment['id'], '被回复', ReferType::COMMENT->value, $user_id);
         $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment['id'], '回复', ReferType::COMMENT->value);
+        // 用户消息
+        $this->messageService->addCommentMessage($post['user_id'], $user_id, $comment['id']);
     }
 
     // 回复
@@ -186,14 +192,17 @@ class CommentService
             if (empty($comment->answer_id)) { // 回答的评论
                 $answer_id = $parent_id;
                 $this_parent_id = 0;
+                $at_parent_id = 0;
                 $at_user_id = 0;
             } else { //评论回复
                 $answer_id = $comment->answer_id;
                 if (empty($comment->parent_id)) { // 一级回复
                     $this_parent_id = $parent_id;
+                    $at_parent_id = 0;
                     $at_user_id = 0;
                 } else { // 多级回复
                     $this_parent_id = $comment->parent_id;
+                    $at_parent_id = $comment->id;
                     $at_user_id = $comment->user_id;
                 }
             }
@@ -201,9 +210,11 @@ class CommentService
             $answer_id = 0;
             if (empty($comment->parent_id)) { // 一级回复
                 $this_parent_id = $parent_id;
+                $at_parent_id = 0;
                 $at_user_id = 0;
             } else { // 多级回复
                 $this_parent_id = $comment->parent_id;
+                $at_parent_id = $comment->id;
                 $at_user_id = $comment->user_id;
             }
         }
@@ -215,6 +226,7 @@ class CommentService
                 'post_type' => $comment->post_type,
                 'parent_id' => $this_parent_id,
                 'answer_id' => $answer_id,
+                'at_parent_id' => $at_parent_id,
                 'at_user_id' => $at_user_id,
                 'content' => $content,
                 'images' => empty($images) ? '' : implode(',', $images),
@@ -226,7 +238,7 @@ class CommentService
             $current_comment['id'] = $comment_id;
             $this->auditService->addAuditRecord(AuditType::COMMENT->value, $comment_id, $user_id);
             Db::table('comment')->where('id', $comment->post_id)->increment('reply_count', 1);
-            $this->replySuccess($user_id, $current_comment, empty($at_user_id) ? $comment->user_id : $at_user_id);
+            $this->replySuccess($user_id, $current_comment, $comment->user_id);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -243,6 +255,8 @@ class CommentService
         // 声望
         $this->creditService->finishPrestigeTask($be_commented_uid, PrestigeCate::BE_COMMENTED, $comment['id'], '被回复', ReferType::COMMENT->value, $user_id);
         $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment['id'], '回复', ReferType::COMMENT->value);
+        // 用户消息
+        $this->messageService->addCommentMessage($be_commented_uid, $user_id, $comment['id'], MessageCate::REPLY);
     }
 
     public function getCommentList(array $params, int $user_id, array $cate = []): array
@@ -375,6 +389,8 @@ class CommentService
         // 声望
         $this->creditService->finishPrestigeTask($comment->user_id, PrestigeCate::BE_LIKED, $comment->id, '获赞', ReferType::COMMENT->value, $user_id);
         $this->creditService->finishPrestigeTask($user_id, PrestigeCate::LIKE, $comment->id, '点赞', ReferType::COMMENT->value);
+        // 用户消息
+        $this->messageService->addLikeMessage($comment->user_id, MessageCate::COMMENT_LIKE->value, ReferType::COMMENT->value, $comment->id, $user_id);
     }
 
     public function checkIsLike(int $comment_id, int $user_id): int
