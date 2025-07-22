@@ -328,7 +328,11 @@ class CommentService
     protected function objectTransformer(object $item, array $cate = [], array $params = [])
     {
         if (property_exists($item, 'user_avatar')) {
-            $item->user_avatar = getAvatar($item->user_avatar);
+            $item->user_info = [
+                'id' => $item->user_id,
+                'avatar' => getAvatar($item->user_avatar),
+                'nickname' => $item->nickname,
+            ];
         }
         if (property_exists($item, 'images')) {
             $item->images = empty($item->images) ? [] : explode(',', $item->images);

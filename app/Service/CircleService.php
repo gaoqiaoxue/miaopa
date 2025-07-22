@@ -107,13 +107,13 @@ class CircleService
         if (empty($relation_ids)) {
             return [];
         }
-        if ($relation_type == CircleRelationType::CIRCLE) {
+        if ($relation_type == CircleRelationType::CIRCLE->value) {
             return Db::table('circle')
                 ->whereIn('id', $relation_ids)
                 ->select(['id', 'name', 'cover'])
                 ->get()
                 ->toArray();
-        } elseif ($relation_type == CircleRelationType::ROLE) {
+        } elseif ($relation_type == CircleRelationType::ROLE->value) {
             return Db::table('role')
                 ->whereIn('id', $relation_ids)
                 ->select(['id', 'name', 'cover'])

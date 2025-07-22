@@ -47,13 +47,13 @@ class PostsService
             $cate = ['cover', 'is_like', 'publish_time'];
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $cate = ['publish_time'];
             $params['has_circle'] = true;
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
         $query = $this->buildQuery($params);
         $query = $query->select($columns);
@@ -91,13 +91,13 @@ class PostsService
             $cate = ['cover', 'is_like', 'publish_time'];
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $cate = ['publish_time'];
             $query->leftJoin('circle', 'circle.id', '=', 'post.circle_id');
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.nickname','post.audit_status', 'post.create_time'];
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -184,7 +184,11 @@ class PostsService
     protected function objectTransformer(object $item, array $cate = [], array $params = [])
     {
         if (property_exists($item, 'user_avatar')) {
-            $item->user_avatar = getAvatar($item->user_avatar);
+            $item->user_info = [
+                'id' => $item->user_id,
+                'avatar' => getAvatar($item->user_avatar),
+                'nickname' => $item->nickname,
+            ];
         }
         if (property_exists($item, 'circle_cover')) {
             $item->circle_cover = generateFileUrl($item->circle_cover);
