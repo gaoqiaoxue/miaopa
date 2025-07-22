@@ -117,6 +117,7 @@ class RoleService
             if ($source == 'user') {
                 $this->auditService->addAuditRecord(AuditType::ROLE->value, $role_id, $create_by);
             }
+            Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());

@@ -278,7 +278,13 @@ class PostsService
                 'source' => $source,
                 'audit_status' => $source == 'user' ? AuditStatus::PENDING->value : AuditStatus::PASSED->value,
             ]);
+            if($source == 'user'){
+                // 添加审核记录
+                $this->auditService->addAuditRecord(AuditType::POST->value, $post_id, $user_id);
+            }
+            // 帖子发布成功
             $this->publishSuccess($user_id,$params['post_type'],$post_id);
+            Db::commit();
         }catch (\Throwable $ex){
             Db::rollBack();
             throw new LogicException($ex->getMessage());
@@ -286,7 +292,7 @@ class PostsService
         return $post_id;
     }
 
-    // 帖子发布成功奖励
+    // 帖子发布成功
     protected function publishSuccess(int $user_id, int $post_type, int $post_id)
     {
         // 金币奖励

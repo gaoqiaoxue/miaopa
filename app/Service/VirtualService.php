@@ -187,16 +187,19 @@ class VirtualService
                     'create_time' => date('Y-m-d H:i:s'),
                 ]);
             if (!$record_id) {
+                Db::rollBack();
                 throw new LogicException('兑换失败');
             }
             $res = Db::table('virtual_item')
                 ->where('id', $item_id)
                 ->decrement('quantity', 1);
             if (!$res) {
+                Db::rollBack();
                 throw new LogicException('兑换失败');
             }
             $res = $this->creditService->setCoin($user_id, -$item->exchange_amount, CoinCate::EXCHANGE->value, $record_id, '兑换' . $item->name);
             if (!$res) {
+                Db::rollBack();
                 throw new LogicException('兑换失败');
             }
             Db::commit();

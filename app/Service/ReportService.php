@@ -118,6 +118,7 @@ class ReportService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
+        return true;
     }
 
     public function reject(int $report_id, int $cur_user_id, string $reject_reason): bool
@@ -155,6 +156,7 @@ class ReportService
         if(empty($content)){
             throw new LogicException('举报内容不存在');
         }
+        Db::beginTransaction();
         $report_id = Db::table('report')->insertGetId([
             'user_id' => $user_id,
             'report_type' => $report_type,
@@ -167,6 +169,8 @@ class ReportService
             'create_time' => date('Y-m-d H:i:s'),
             'update_time' => date('Y-m-d H:i:s'),
         ]);
+        $this->auditService->addAuditRecord(AuditType::REPORT->value, $report_id, $user_id);
+        Db::commit();
         return $report_id;
     }
 

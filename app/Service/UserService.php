@@ -200,6 +200,10 @@ class UserService
             $arr['region'] = $region;
             $arr['region_id'] = $params['region_id'];
         }
+        if(!empty($params['region']) && $params['region'] != $user->region){
+            $arr['region'] = $params['region'];
+            $arr['region_id'] = 0;
+        }
         if(!empty($params['school']) && $params['school'] != $user->school){
             $arr['school'] = $params['school'];
         }
