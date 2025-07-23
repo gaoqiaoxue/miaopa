@@ -31,4 +31,12 @@ enum ActivityType: int
         ];
     }
 
+    public static function getColor($value)
+    {
+        $list = [
+            self::COMIC_CON->value => '#B2A9FF', // #DF9CE3   #E5BE75  #72B8FF
+        ];
+        return $list[$value] ?? '';
+    }
+
 }

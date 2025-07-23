@@ -91,11 +91,25 @@ class ActivityService
         if(!empty($params['keyword'])){
             $query->where('name', 'like', '%' . $params['keyword'] . '%');
         }
+        if (!empty($params['lat']) && !empty($params['lon'])) {
+            $userLat = (float)$params['lat'];
+            $userLon = (float)$params['lon'];
+            $earthRadius = 6371;
+            $distanceFormula = "ROUND(
+                $earthRadius * ACOS(
+                    COS(RADIANS($userLat)) * COS(RADIANS(lat)) * 
+                    COS(RADIANS(lon) - RADIANS($userLon)) + 
+                    SIN(RADIANS($userLat)) * SIN(RADIANS(lat))
+                ), 2
+            )";
+            $query->selectRaw('id,cover,name,activity_type,active_status,fee,city,address,lat,lon,start_date,end_date,start_time,end_time,tags,create_time,' . $distanceFormula . ' AS distance');
+        } else {
+            $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time']);
+        }
         if(!empty($limit)){
             $query->limit($limit);
         }
-        $items = $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time'])
-            ->orderBy('is_hot', 'desc')
+        $items = $query->orderBy('is_hot', 'desc')
             ->orderBy('weight', 'desc')
             ->orderBy('create_time', 'desc')
             ->get()
@@ -187,7 +201,7 @@ class ActivityService
     // 组装活动表数据
     protected function generalData(array $data, $is_add = false): array
     {
-        $start = strtotime($data['start_date'] . ' ' . $data['end_date']);
+        $start = strtotime($data['start_date'] . ' ' . $data['start_time']);
         $end = strtotime($data['end_date'] . ' ' . $data['end_time']);
         $result = [
             'bg' => $data['bg'],
@@ -313,6 +327,7 @@ LIMIT 7;';
             $item->cover_url = generateFileUrl($item->cover);
         }
         if (property_exists($item, 'activity_type')) {
+            $item->activity_type_color = ActivityType::getColor($item->activity_type);
             $item->activity_type_text = ActivityType::from($item->activity_type)->getMessage();
         }
         if (property_exists($item, 'active_status')) {
@@ -323,6 +338,10 @@ LIMIT 7;';
         }
         if (property_exists($item, 'cover')) {
             $item->cover_url = generateFileUrl($item->cover);
+        }
+        if(property_exists($item, 'start_time')){
+            $item->start_time = date('H:i', strtotime($item->start_time));
+            $item->end_time = date('H:i', strtotime($item->end_time));
         }
         if (in_array('is_like', $cate)) {
             if (isset($params['like_ids'])) {

@@ -13,8 +13,8 @@ use Hyperf\Validation\Request\FormRequest;
 class ActivityRequest extends FormRequest
 {
     protected array $scenes = [
-        'add' => ['bg', 'cover', 'name', 'activity_type', 'organizer', 'is_hot', 'weight', 'status', 'city_id', 'address', 'fee', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'details'],
-        'edit' => ['activity_id', 'bg', 'cover', 'name', 'activity_type', 'organizer', 'is_hot', 'weight', 'status', 'city_id', 'address', 'fee', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'details'],
+        'add' => ['bg', 'cover', 'name', 'activity_type', 'organizer', 'is_hot', 'weight', 'status', 'city_id', 'address', 'lat', 'lon', 'fee', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'details'],
+        'edit' => ['activity_id', 'bg', 'cover', 'name', 'activity_type', 'organizer', 'is_hot', 'weight', 'status', 'city_id', 'address', 'lat', 'lon', 'fee', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'details'],
         'change_status' => ['activity_id', 'status'],
         'id' => ['activity_id'],
     ];
@@ -43,6 +43,8 @@ class ActivityRequest extends FormRequest
             'status' => 'required|in:0,1',
             'city_id' => 'required',
             'address' => 'required',
+            'lat' => 'numeric',
+            'lon' => 'numeric',
             'fee' => 'required',
             'start_date' => 'required',
             'end_date' => 'required',
