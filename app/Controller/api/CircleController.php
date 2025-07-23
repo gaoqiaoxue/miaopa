@@ -35,7 +35,7 @@ class CircleController extends AbstractController
 
     public function searchRecommend()
     {
-        $list = $this->service->getAllByType(0, '',false, 10);
+        $list = $this->service->getAllByType(0, '',false, 12);
         return returnSuccess($list);
     }
 

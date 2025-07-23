@@ -164,7 +164,7 @@ class MessageService
             ->orderBy('user_message.id', 'desc');
         if ($paginate) {
             $page = empty($params['page']) ? 1 : $params['page'];
-            $page_size = empty($params['page_size']) ? 10 : $params['page_size'];
+            $page_size = empty($params['page_size']) ? 15 : $params['page_size'];
             $list = $query->paginate((int)$page_size, page: (int)$page);
             $list = paginateTransformer($list);
         } else {

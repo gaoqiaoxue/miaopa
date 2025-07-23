@@ -24,7 +24,7 @@ class CircleService
             $list = $query->get()->toArray();
         }
         foreach ($list as $item) {
-            $this->objectTransformer($item,[],$params);
+            $this->objectTransformer($item,$params['cate'] ?? [],$params);
         }
         return $list;
     }

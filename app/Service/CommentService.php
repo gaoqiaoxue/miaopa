@@ -272,9 +272,10 @@ class CommentService
             $query->where('comment.answer_id', $params['answer_id']);
         }
         $page = empty($params['page']) ? 1 : intval($params['page']);
-        $page_size = empty($params['page_size']) ? 10 : intval($params['page_size']);
+        $page_size = empty($params['page_size']) ? 15 : intval($params['page_size']);
         $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
             'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
+            ->orderBy('comment.is_top', 'desc')
             ->orderBy('comment.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
@@ -286,28 +287,27 @@ class CommentService
         return $data;
     }
 
-    public function getReplyList(array $params, int $user_id, array $cate = []): array
+    public function getReplyList(array $params, int $user_id = 0, array $cate = []): array
     {
         $query = Db::table('comment')
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
             ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0])
-            ->where('comment.parent_id', '=', 0);
-        if (!empty($params['comment_id'])) {
-            $query->where('comment.parent_id', $params['comment_id']);
-        }
-        $page = empty($params['page']) ? 1 : intval($params['page']);
-        $page_size = empty($params['page_size']) ? 10 : intval($params['page_size']);
-        $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
+            ->where('comment.parent_id', $params['comment_id']);
+        $start = empty($params['next_num']) ? 0 : intval($params['next_num']);
+        $limit = empty($params['limit']) ? 10 : intval($params['limit']);
+        $list = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
             'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
             ->orderBy('comment.create_time', 'desc')
-            ->paginate((int)$page_size, page: (int)$page);
-        $data = paginateTransformer($data);
-        $comment_ids = array_column($data['items'], 'id');
+            ->limit($limit)
+            ->offset($start)
+            ->get()
+            ->toArray();
+        $comment_ids = array_column($list, 'id');
         $like_ids = $this->getUserCommentLikes($user_id, $comment_ids);
-        foreach ($data['items'] as $item) {
+        foreach ($list as $item) {
             $this->objectTransformer($item, $cate, ['user_id' => $user_id, 'like_ids' => $like_ids]);
         }
-        return $data;
+        return ['next_num' => count($list) == $limit ? $start + $limit : 0, 'items' => $list];
     }
 
     public function getCommentDetail(int $comment_id, int $user_id): object
@@ -344,6 +344,12 @@ class CommentService
             } else {
                 $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
             }
+        }
+        if (in_array('reply', $cate)) {
+            if ($item->reply_count == 0) {
+                $item->reply = ['next_num' => 0, 'data' => []];
+            }
+            $item->reply = $this->getReplyList(['comment_id' => $item->id, 'limit' => 1], $params['user_id'] ?? 0, ['is_like']);
         }
     }
 

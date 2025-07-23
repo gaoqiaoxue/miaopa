@@ -3,7 +3,7 @@
 namespace App\Service;
 
 use App\Constants\PrestigeCate;
-use App\Constants\ReferType;
+use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
@@ -17,6 +17,9 @@ class UserFollowService
 
     public function follow(int $user_id, int $follow_id, int $status): bool
     {
+        if($user_id == $follow_id){
+            throw new LogicException('不能关注自己');
+        }
         $has = Db::table('user_follow')
             ->where(['follow_id' => $follow_id, 'user_id' => $user_id])
             ->count();
@@ -71,7 +74,7 @@ class UserFollowService
             $query->where('user.nickname', 'like', "%{$params['keyword']}%");
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 10;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['user.id', 'user.nickname', 'user.avatar', 'user_follow.create_time'])
             ->orderBy('user_follow.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
@@ -105,7 +108,7 @@ class UserFollowService
             $query->where('user.nickname', 'like', "%{$params['keyword']}%");
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 10;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['user.id', 'user.nickname', 'user.avatar', 'user_follow.create_time'])
             ->orderBy('id', 'desc')
             ->paginate((int)$page_size, page: (int)$page);

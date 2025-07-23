@@ -64,7 +64,7 @@ class CommentController extends AbstractController
         if (empty($params['answer_id']) && empty($params['post_id'])) {
             return returnError('参数错误');
         }
-        $list = $this->service->getCommentList((array)$params, (int)$user_id, ['reply']);
+        $list = $this->service->getCommentList($params, (int)$user_id, ['reply', 'is_like']);
         return returnSuccess($list);
     }
 
@@ -76,7 +76,7 @@ class CommentController extends AbstractController
         if (empty($params['comment_id'])) {
             return returnError('参数错误');
         }
-        $list = $this->service->getReplyList((array)$params, (int)$user_id);
+        $list = $this->service->getReplyList($params, (int)$user_id);
         return returnSuccess($list);
     }
 

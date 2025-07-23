@@ -24,7 +24,7 @@ class FollowController extends AbstractController
         $params = $request->validated();
         $user_id = $this->request->getAttribute('user_id');
         $this->service->follow($user_id, $params['follow_id'], $params['status']);
-        return returnSuccess();
+        return returnSuccess([], $params['status'] == 1 ? '关注成功' : '取消关注成功');
     }
 
     #[Middleware(ApiMiddleware::class)]

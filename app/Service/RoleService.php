@@ -42,7 +42,7 @@ class RoleService
             $query->whereBetween('create_time', [$params['start_time'], $params['end_time']]);
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 10;
+        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $list = $query->select(['id', 'name', 'alias', 'cover', 'role_type', 'author', 'circle_id', 'weight',
             'images', 'description', 'status', 'audit_status', 'source', 'create_by', 'create_time'])
             ->orderBy('id', 'desc')
