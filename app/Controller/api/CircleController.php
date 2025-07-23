@@ -33,6 +33,12 @@ class CircleController extends AbstractController
         return returnSuccess($list);
     }
 
+    public function searchRecommend()
+    {
+        $list = $this->service->getAllByType(0, '',false, 10);
+        return returnSuccess($list);
+    }
+
     public function getList(AuthTokenInterface $authToken): array
     {
         $params = $this->request->all();

@@ -203,7 +203,7 @@ class CircleService
                 ->leftJoin('circle', 'circle.id', '=', 'circle_follow.circle_id')
                 ->where('circle_follow.user_id', '=', $user_id)
                 ->where('circle.status', '=', AbleStatus::ENABLE)
-                ->select(['circle.id', 'circle.name', 'circle.cover'])
+                ->select(['circle.id', 'circle.name', 'circle.cover','circle.relation_type', 'circle.relation_ids'])
                 ->orderBy('circle.is_hot', 'desc')
                 ->orderBy('circle.weight', 'desc')
                 ->orderBy('circle.id', 'desc')
@@ -215,7 +215,7 @@ class CircleService
         if ($num < $total_num) {
             $recom_circles = Db::table('circle')
                 ->where('status', '=', AbleStatus::ENABLE)
-                ->select(['id', 'name', 'cover'])
+                ->select(['id', 'name', 'cover', 'relation_type', 'relation_ids'])
                 ->orderBy('is_hot', 'desc')
                 ->orderBy('weight', 'desc')
                 ->orderBy('id', 'desc')
@@ -252,7 +252,7 @@ class CircleService
     }
 
     // API 按分类分组 带搜索和关注
-    public function getAllByType(int $user_id = 0, string $keyword = '', int $limit = 0)
+    public function getAllByType(int $user_id = 0, string $keyword = '', bool $has_follow = true, int $limit = 0)
     {
         $query = Db::table('circle')
             ->where('status', '=', AbleStatus::ENABLE)
@@ -265,31 +265,34 @@ class CircleService
         }
         $all = $query->get()->toArray();
         $follow_ids = [];
-        if (!empty($user_id)) {
+        if (!empty($user_id) && $has_follow) {
             $follow_ids = Db::table('circle_follow')
                 ->where('user_id', '=', $user_id)
                 ->pluck('circle_id')
                 ->toArray();
         }
         $result = [
-            'follow' => [],
-            'hot' => [],
-            CircleType::CIRCLE->name => [],
-            CircleType::CARTOON->name => [],
-            CircleType::GAME->name => []
+            'follow' => ['title' => '关注', 'key' => 'follow', 'children' => []],
+            'hot' => ['title' => '热门', 'key' => 'hot', 'children' => []],
+            CircleType::CIRCLE->name => ['title' => CircleType::CIRCLE->getMessage(), 'key' => 'circle', 'children' => []],
+            CircleType::CARTOON->name => ['title' => CircleType::CARTOON->getMessage(), 'key' => 'cartoon', 'children' => []],
+            CircleType::GAME->name => ['title' => CircleType::GAME->getMessage(), 'key' => 'game', 'children' => []]
         ];
+        if(!$has_follow){
+            unset($result['follow']);
+        }
         foreach ($all as $circle) {
             $this->objectTransformer($circle);
-            if (in_array($circle->id, $follow_ids)) {
-                (!$limit || count($result['follow']) < $limit) && $result['follow'][] = $circle;
+            if ($has_follow && in_array($circle->id, $follow_ids)) {
+                (!$limit || count($result['follow']) < $limit) && $result['follow']['children'][] = $circle;
             }
             if ($circle->is_hot) {
-                (!$limit || count($result['hot']) < $limit) && $result['hot'][] = $circle;
+                (!$limit || count($result['hot']) < $limit) && $result['hot']['children'][] = $circle;
             }
             $type_name = CircleType::tryFrom($circle->circle_type)->name ?? '';
-            (!$limit || count($result[$type_name]) < $limit) && $result[$type_name][] = $circle;
+            (!$limit || count($result[$type_name]) < $limit) && $result[$type_name]['children'][] = $circle;
         }
-        return $result;
+        return array_values($result);
     }
 
     public function follow(int $user_id, int $circle_id, int $status): bool

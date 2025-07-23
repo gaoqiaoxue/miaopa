@@ -209,6 +209,9 @@ class PostsService
         if (in_array('publish_time', $cate)) {
             $item->create_time = getPublishTime(strtotime($item->create_time));
         }
+        $color = ['#EEFCFF', '#FFF3E8', '#FFF0EF', '#FCEFFF'];
+        $c_id = $item->id % 4;
+        $item->bg_color = $color[$c_id];
     }
 
     public function delete(int $post_id): int

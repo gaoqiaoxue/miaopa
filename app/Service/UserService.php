@@ -66,7 +66,7 @@ class UserService
         $u_ids = array_column($items, 'id');
         $follow_ids = $this->followService->getFollowIds($params['current_user_id'] ?? 0, $u_ids);
         foreach ($items as $item) {
-            $item->is_follow = in_array($item['id'], $follow_ids) ? 1 : 0;
+            $item->is_follow = in_array($item->id, $follow_ids) ? 1 : 0;
             $this->objectTransformer($item, [], $params);
         }
         return $items;
