@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace HyperfTest\Cases;
 
+use App\Constants\AbleStatus;
 use App\Constants\IsRisky;
 use App\Library\WechatMiniAppLib;
 use App\Service\CircleService;
@@ -28,9 +29,23 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $service = make(CircleService::class);
-        $res = $service->getRelationsById(1);
-        var_dump($res);
+        $sql = "SELECT 
+    c.id, c.name, c.cover, c.relation_type, c.relation_ids,
+    CASE WHEN cf.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_follow
+FROM 
+    mp_circle c
+LEFT JOIN 
+    mp_circle_follow cf ON c.id = cf.circle_id AND cf.user_id = :userId
+WHERE 
+    c.status = :status
+ORDER BY 
+    is_follow DESC, 
+    c.is_hot DESC, 
+    c.weight DESC, 
+    c.id DESC
+LIMIT 10";
+        $circles = Db::select($sql, ['userId' => 1, 'status' => AbleStatus::ENABLE->value]);
+        var_dump($circles);
         $this->assertTrue(true, '111');
     }
 }

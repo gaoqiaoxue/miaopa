@@ -197,32 +197,33 @@ class CircleService
     public function getRecommendList(int $user_id = 0): array
     {
         $total_num = 8;
-        $circles = [];
         if (!empty($user_id)) {
-            $circles = Db::table('circle_follow')
-                ->leftJoin('circle', 'circle.id', '=', 'circle_follow.circle_id')
-                ->where('circle_follow.user_id', '=', $user_id)
-                ->where('circle.status', '=', AbleStatus::ENABLE)
-                ->select(['circle.id', 'circle.name', 'circle.cover','circle.relation_type', 'circle.relation_ids'])
-                ->orderBy('circle.is_hot', 'desc')
-                ->orderBy('circle.weight', 'desc')
-                ->orderBy('circle.id', 'desc')
-                ->limit($total_num)
-                ->get()
-                ->toArray();
-        }
-        $num = count($circles);
-        if ($num < $total_num) {
-            $recom_circles = Db::table('circle')
+            $sql = 'SELECT 
+    c.id, c.name, c.cover, c.relation_type, c.relation_ids,
+    CASE WHEN cf.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_follow
+FROM 
+    mp_circle c
+LEFT JOIN 
+    mp_circle_follow cf ON c.id = cf.circle_id AND cf.user_id = :userId
+WHERE 
+    c.status = :status
+ORDER BY 
+    is_follow DESC, 
+    c.is_hot DESC, 
+    c.weight DESC, 
+    c.id DESC
+LIMIT :limit;';
+            $circles = Db::select($sql, ['userId' => 1, 'status' => AbleStatus::ENABLE->value, 'limit' => $total_num]);
+        }else{
+            $circles = Db::table('circle')
                 ->where('status', '=', AbleStatus::ENABLE)
-                ->select(['id', 'name', 'cover', 'relation_type', 'relation_ids'])
+                ->selectRaw('id, name, cover, relation_type, relation_ids,0 as is_follow')
                 ->orderBy('is_hot', 'desc')
                 ->orderBy('weight', 'desc')
                 ->orderBy('id', 'desc')
-                ->limit($total_num - $num)
+                ->limit($total_num)
                 ->get()
                 ->toArray();
-            $circles = array_merge($circles, $recom_circles);
         }
         if (!empty($circles)) {
             foreach ($circles as $circle) {
