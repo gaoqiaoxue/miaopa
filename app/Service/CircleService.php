@@ -87,7 +87,7 @@ class CircleService
         return $query;
     }
 
-    public function getInfo(int $circle_id, array $cate = ['relations', 'post_count','creater'], array $params = []): object
+    public function getInfo(int $circle_id, array $cate = [], array $params = []): object
     {
         if (empty($circle_id))
             throw new ParametersException('请传入圈子ID');
@@ -102,23 +102,24 @@ class CircleService
         return $circle;
     }
 
-    protected function getRelations($relation_type, $relation_ids): array
+    protected function getRelations($relation_type, $relation_ids, $source = 'api'): array
     {
         if (empty($relation_ids)) {
             return [];
         }
         if ($relation_type == CircleRelationType::CIRCLE->value) {
-            return Db::table('circle')
-                ->whereIn('id', $relation_ids)
-                ->select(['id', 'name', 'cover'])
-                ->get()
-                ->toArray();
+            $query = Db::table('circle')->whereIn('id', $relation_ids);
+            if($source == 'api'){
+                $query->where('status', '=', AbleStatus::ENABLE->value);
+            }
+            return $query->select(['id', 'name', 'cover'])->get()->toArray();
         } elseif ($relation_type == CircleRelationType::ROLE->value) {
-            return Db::table('role')
-                ->whereIn('id', $relation_ids)
-                ->select(['id', 'name', 'cover'])
-                ->get()
-                ->toArray();
+            $query = Db::table('role')->whereIn('id', $relation_ids);
+            if($source == 'api'){
+                $query->where('status', '=', AbleStatus::ENABLE->value)
+                    ->where('audit_status', '=', AbleStatus::ENABLE->value);
+            }
+            return $query->select(['id', 'name', 'cover'])->get()->toArray();
         } else {
             return [];
         }
@@ -355,6 +356,9 @@ LIMIT :limit;';
             } else {
                 $item->is_follow = $this->checkIsFollow($item->id, $params['user_id'] ?? 0);
             }
+        }
+        if(in_array('admin_relations', $cate)){
+            $item->relations = $this->getRelations($item->relation_type, json_decode($item->relation_ids, true, 'admin'));
         }
         if(in_array('relations', $cate)){
             $item->relations = $this->getRelations($item->relation_type, json_decode($item->relation_ids, true));

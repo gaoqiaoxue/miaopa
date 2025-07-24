@@ -85,10 +85,10 @@ class ActivityService
         $query = Db::table('activity')
             ->where('status', AbleStatus::ENABLE->value)
             ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value]);
-        if(!empty($params['city_id'])){
+        if (!empty($params['city_id'])) {
             $query->where('city_id', $params['city_id']);
         }
-        if(!empty($params['keyword'])){
+        if (!empty($params['keyword'])) {
             $query->where('name', 'like', '%' . $params['keyword'] . '%');
         }
         if (!empty($params['lat']) && !empty($params['lon'])) {
@@ -106,7 +106,7 @@ class ActivityService
         } else {
             $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time']);
         }
-        if(!empty($limit)){
+        if (!empty($limit)) {
             $query->limit($limit);
         }
         $items = $query->orderBy('is_hot', 'desc')
@@ -286,30 +286,36 @@ class ActivityService
     }
 
     // 获取城市最近有活动的日期
-    public function getDates(int $city_id)
+    public function getDates(int $city_id = 0)
     {
         $sql = 'WITH RECURSIVE activity_dates AS (
-    SELECT 
-        start_date AS activity_date,
-        end_date
-    FROM mp_activity
-    WHERE status = 1 AND active_status in (1,2) AND city_id = :city_id
-    
-    UNION ALL
-    
-    SELECT 
-        activity_date + INTERVAL 1 DAY,
-        end_date
-    FROM activity_dates
-    WHERE activity_date < end_date
-)
-
-SELECT DISTINCT activity_date
-FROM activity_dates
-WHERE activity_date >= :current_date
-ORDER BY activity_date ASC
-LIMIT 7;';
-        $list = Db::select($sql, ['city_id' => $city_id, 'current_date' => date('Y-m-d')]);
+        SELECT 
+            start_date AS activity_date,
+            end_date
+        FROM mp_activity
+        WHERE status = 1 AND active_status in (1,2)';
+        if (!empty($city_id)) {
+            $sql .= ' AND city_id = :city_id';
+        }
+        $sql .= ' UNION ALL
+        
+            SELECT 
+                activity_date + INTERVAL 1 DAY,
+                end_date
+            FROM activity_dates
+            WHERE activity_date < end_date
+        )
+        
+        SELECT DISTINCT activity_date
+        FROM activity_dates
+        WHERE activity_date >= :current_date
+        ORDER BY activity_date ASC
+        LIMIT 30;';
+        $params = ['current_date' => date('Y-m-d')];
+        if (!empty($city_id)) {
+            $params['city_id'] = $city_id;
+        }
+        $list = Db::select($sql, $params);
         foreach ($list as $item) {
             $time = strtotime($item->activity_date);
             $item->date = date('m.d', $time);
@@ -339,7 +345,7 @@ LIMIT 7;';
         if (property_exists($item, 'cover')) {
             $item->cover_url = generateFileUrl($item->cover);
         }
-        if(property_exists($item, 'start_time')){
+        if (property_exists($item, 'start_time')) {
             $item->start_time = date('H:i', strtotime($item->start_time));
             $item->end_time = date('H:i', strtotime($item->end_time));
         }
@@ -350,20 +356,20 @@ LIMIT 7;';
                 $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
             }
         }
-        if(in_array('creater',$cate)){
+        if (in_array('creater', $cate)) {
             $item->creater_name = Db::table('sys_user')
                 ->where('user_id', '=', $item->create_by)
                 ->value('nick_name');
         }
-        if(in_array('city', $cate)){
+        if (in_array('city', $cate)) {
             $city = Db::table('sys_region')
                 ->where('id', '=', $item->city_id)
-                ->first(['id','pid', 'name', 'full_name']);
+                ->first(['id', 'pid', 'name', 'full_name']);
             $item->cityInfo = [
                 'city_id' => $city->id,
                 'city_name' => $city->name,
                 'province_id' => $city->pid,
-                'province_name' => explode( '/', $city->full_name)[0] ?? ''
+                'province_name' => explode('/', $city->full_name)[0] ?? ''
             ];
         }
     }
@@ -448,7 +454,7 @@ LIMIT 7;';
     protected function signSuccess(int $user_id, object $activity)
     {
         // 金币奖励
-        $this->creditService->finishCoinTask($user_id, CoinCate::ACTIVITY, $activity->id, '活动报名:'.$activity->name);
+        $this->creditService->finishCoinTask($user_id, CoinCate::ACTIVITY, $activity->id, '活动报名:' . $activity->name);
     }
 
     // 获取用户报名的活动列表
@@ -497,7 +503,7 @@ LIMIT 7;';
         $query = Db::table('view_history')
             ->leftJoin('activity', 'activity.id', '=', 'view_history.content_id')
             ->where('view_history.user_id', $user_id)
-            ->where('view_history.content_type', '=','activity');
+            ->where('view_history.content_type', '=', 'activity');
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['activity.id as activity_id', 'activity.cover', 'activity.name', 'activity.activity_type',

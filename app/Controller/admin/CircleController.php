@@ -24,31 +24,31 @@ class CircleController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function getList():array
+    public function getList(): array
     {
         $params = $this->request->all();
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }
 
-    public function getInfo():array
+    public function getInfo(): array
     {
         $circle_id = $this->request->input('circle_id', 0);
-        $circle = $this->service->getInfo($circle_id);
+        $circle = $this->service->getInfo($circle_id, ['admin_relations', 'post_count', 'creater']);
         return returnSuccess($circle);
     }
 
     #[Scene('add')]
-    public function add(CircleRequest $request):array
+    public function add(CircleRequest $request): array
     {
         $data = $request->validated();
-        $data['create_by'] =  $this->request->getAttribute("user_id");
+        $data['create_by'] = $this->request->getAttribute("user_id");
         $result = $this->service->add($data);
         return returnSuccess($result);
     }
 
     #[Scene('edit')]
-    public function edit(CircleRequest $request):array
+    public function edit(CircleRequest $request): array
     {
         $data = $request->validated();
         $this->service->edit($data);
@@ -56,14 +56,14 @@ class CircleController extends AbstractController
     }
 
     #[Scene('change_status')]
-    public function changeStatus(CircleRequest $request):array
+    public function changeStatus(CircleRequest $request): array
     {
         $data = $request->validated();
         $this->service->changeStatus($data['circle_id'], $data['status']);
         return returnSuccess();
     }
 
-    public function getUsers():array
+    public function getUsers(): array
     {
         $params = $this->request->all();
         $list = $this->service->getFollowUsers($params);
