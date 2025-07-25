@@ -32,6 +32,20 @@ class CircleService
     // 圈子列表
     public function getList($params = [], $cate = [])
     {
+        if(!empty($params['key'])){
+            switch($params['key']){
+                case 'follow':
+                    $params['is_follow'] = 1; break;
+                case 'hot':
+                    $params['is_hot'] = 1; break;
+                case 'circle':
+                    $params['circle_type'] = CircleType::CIRCLE->value;break;
+                case 'cartoon':
+                    $params['circle_type'] = CircleType::CARTOON->value;break;
+                case 'game':
+                    $params['circle_type'] = CircleType::GAME->value;break;
+            }
+        }
         $query = $this->buildQuery($params);
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -77,6 +91,9 @@ class CircleService
                 ->pluck('circle_id')
                 ->toArray();
             $query->whereIn('id', $follow_ids);
+        }
+        if(!empty($params['is_hot'])){
+            $query->where('is_hot', '=', 1);
         }
         if (!empty($params['circle_type'])) {
             $query->where('circle_type', $params['circle_type']);
@@ -274,11 +291,11 @@ LIMIT :limit;';
                 ->toArray();
         }
         $result = [
-            'follow' => ['title' => '关注', 'key' => 'follow', 'children' => []],
-            'hot' => ['title' => '热门', 'key' => 'hot', 'children' => []],
-            CircleType::CIRCLE->name => ['title' => CircleType::CIRCLE->getMessage(), 'key' => 'circle', 'children' => []],
-            CircleType::CARTOON->name => ['title' => CircleType::CARTOON->getMessage(), 'key' => 'cartoon', 'children' => []],
-            CircleType::GAME->name => ['title' => CircleType::GAME->getMessage(), 'key' => 'game', 'children' => []]
+            'follow' => ['title' => '关注', 'key' => 'follow', 'children' => [], 'total' => 0],
+            'hot' => ['title' => '热门', 'key' => 'hot', 'children' => [], 'total' => 0],
+            CircleType::CIRCLE->name => ['title' => CircleType::CIRCLE->getMessage(), 'key' => 'circle', 'children' => [], 'total' => 0],
+            CircleType::CARTOON->name => ['title' => CircleType::CARTOON->getMessage(), 'key' => 'cartoon', 'children' => [], 'total' => 0],
+            CircleType::GAME->name => ['title' => CircleType::GAME->getMessage(), 'key' => 'game', 'children' => [], 'total' => 0]
         ];
         if(!$has_follow){
             unset($result['follow']);
@@ -286,13 +303,16 @@ LIMIT :limit;';
         foreach ($all as $circle) {
             $this->objectTransformer($circle);
             if ($has_follow && in_array($circle->id, $follow_ids)) {
-                (!$limit || count($result['follow']) < $limit) && $result['follow']['children'][] = $circle;
+                $result['follow']['total'] += 1;
+                ($limit == 0 || count($result['follow']['children']) < $limit) && $result['follow']['children'][] = $circle;
             }
             if ($circle->is_hot) {
-                (!$limit || count($result['hot']) < $limit) && $result['hot']['children'][] = $circle;
+                $result['hot']['total'] += 1;
+                ($limit == 0 || count($result['hot']['children']) < $limit) && $result['hot']['children'][] = $circle;
             }
             $type_name = CircleType::tryFrom($circle->circle_type)->name ?? '';
-            (!$limit || count($result[$type_name]) < $limit) && $result[$type_name]['children'][] = $circle;
+            $result[$type_name]['total'] += 1;
+            ($limit == 0 || count($result[$type_name]['children']) < $limit) && $result[$type_name]['children'][] = $circle;
         }
         return array_values($result);
     }

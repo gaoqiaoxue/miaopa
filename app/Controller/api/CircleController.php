@@ -29,7 +29,7 @@ class CircleController extends AbstractController
         $keyword = trim((string)$keyword);
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
-        $list = $this->service->getAllByType($user_id, $keyword);
+        $list = $this->service->getAllByType($user_id, $keyword,true, 10);
         return returnSuccess($list);
     }
 
@@ -90,7 +90,7 @@ class CircleController extends AbstractController
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $circle_id = $request->input('circle_id', 0);
-        $list = $this->service->getInfo($circle_id, ['is_follow'], ['user_id' => $user_id]);
+        $list = $this->service->getInfo($circle_id, ['is_follow', 'relations'], ['user_id' => $user_id]);
         return returnSuccess($list);
     }
 
