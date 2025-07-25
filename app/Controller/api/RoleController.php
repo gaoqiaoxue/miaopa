@@ -3,15 +3,22 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
+use App\Middleware\ApiMiddleware;
 use App\Request\RoleRequest;
 use App\Service\RoleService;
+use Hyperf\Di\Annotation\Inject;
+use Hyperf\HttpServer\Annotation\AutoController;
+use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
+#[AutoController]
 class RoleController extends AbstractController
 {
+    #[Inject]
     protected RoleService $roleService;
 
     #[Scene('user_add')]
+    #[Middleware(ApiMiddleware::class)]
     public function add(RoleRequest $request): array
     {
         $params = $request->validated();

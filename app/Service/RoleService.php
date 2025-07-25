@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
+use App\Constants\CircleRelationType;
 use App\Constants\RoleType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
@@ -85,6 +86,9 @@ class RoleService
         if (property_exists($info, 'images')) {
             $info->images = generateMulFileUrl($info->images);
         }
+        if (property_exists($info, 'role_type')) {
+            $info->role_type_text = RoleType::from($info->role_type)->getMessage();
+        }
         if (in_array('circle', $cate)) {
             if (isset($extra['circles'])) {
                 $info->circle_name = $extra['circles'][$info->circle_id] ?? '';
@@ -116,6 +120,9 @@ class RoleService
             $role_id = Db::table('role')->insertGetId($data);
             if ($source == 'user') {
                 $this->auditService->addAuditRecord(AuditType::ROLE->value, $role_id, $create_by);
+            }
+            if(!empty($data['circle_id'])){
+                $this->updateCircleRoleRelation($data['circle_id'], $role_id);
             }
             Db::commit();
         } catch (\Throwable $ex) {
@@ -205,10 +212,37 @@ class RoleService
                 'audit_result' => $reject_reason,
             ]);
             $this->auditService->reject(AuditType::ROLE->value, $role_id, $cur_user_id, $reject_reason);
+            $this->updateCircleRoleRelation($role->circle_id, $role_id, false);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
+        }
+        return true;
+    }
+
+    private function updateCircleRoleRelation(int $circle_id, int $role_id, bool $is_add = true)
+    {
+        $circle = Db::table('circle')
+            ->where('id', '=', $circle_id)
+            ->first(['id', 'name', 'relation_type', 'relation_ids']);
+        if($circle->relation_type != CircleRelationType::ROLE->value){
+            throw new LogicException('该圈子关联类型不是角色');
+        }
+        $relation_ids = json_decode($circle->relation_ids,true);
+        if($is_add && !in_array($role_id,$relation_ids)){
+            $relation_ids[] = $role_id;
+            if(count($relation_ids) > 100){
+                throw new LogicException('圈子'.$circle->name.'关联角色数量已经超过100个');
+            }
+            Db::table('circle')->where('id', '=', $circle_id)->update([
+                'relation_ids' => json_encode($relation_ids),
+            ]);
+        }elseif (!$is_add && in_array($role_id,$relation_ids)){
+            $relation_ids = array_diff($relation_ids, [$role_id]);
+            Db::table('circle')->where('id', '=', $circle_id)->update([
+                'relation_ids' => json_encode($relation_ids),
+            ]);
         }
         return true;
     }
