@@ -37,7 +37,7 @@ class RoleRequest extends FormRequest
             'cover' => 'string',
             'role_type' => 'integer|in:1,2',
             'author' => 'string|max:255',
-            'circle_id' => 'required|integer',
+            'circle_id' => 'integer',
             'weight' => 'integer',
             'description' => 'string',
             'images' => 'array',

@@ -10,6 +10,7 @@ class PostsRequest extends FormRequest
         'id' => ['post_id'],
         'publish' => ['post_type', 'circle_id', 'title', 'content', 'media', 'media_type'],
         'update' => ['post_id', 'circle_id', 'title', 'content', 'media', 'media_type'],
+        'like' => ['post_id', 'status'],
     ];
 
     /**
@@ -33,7 +34,8 @@ class PostsRequest extends FormRequest
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'media' => 'array',
-            'media_type' => 'in:1,2'
+            'media_type' => 'in:1,2',
+            'status' => 'required|in:0,1',
         ];
     }
 
@@ -55,6 +57,9 @@ class PostsRequest extends FormRequest
             'content.required' => '内容不能为空',
             'content.string' => '内容必须为字符串',
             'media.array' => '媒体必须为数组',
+            'media_type.in' => '媒体类型必须为1或2',
+            'status.required' => '状态不能为空',
+            'status.in' => '状态必须为0或1',
         ];
 
     }

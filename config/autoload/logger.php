@@ -41,7 +41,22 @@ return [
                         'allowInlineLineBreaks' => true,
                     ],
                 ],
-            ]
+            ],
+            [
+                'class' => Monolog\Handler\RotatingFileHandler::class,
+                'constructor' => [
+                    'filename' => BASE_PATH . '/runtime/logs/hyperf-debug.log',
+                    'level' => Monolog\Logger::DEBUG,
+                ],
+                'formatter' => [
+                    'class' => Monolog\Formatter\LineFormatter::class,
+                    'constructor' => [
+                        'format' => "%datetime%||%level_name%||%message%||%context%||%extra%\n",
+                        'dateFormat' => 'Y-m-d H:i:s',
+                        'allowInlineLineBreaks' => true,
+                    ],
+                ],
+            ],
         ],
     ],
     'wxmini' => [

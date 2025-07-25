@@ -98,7 +98,7 @@ class PostsController extends AbstractController
     public function history(UserViewRecordService $viewService): array
     {
         $params = $this->request->all();
-        if(empty($params['post_type'])){
+        if (empty($params['post_type'])) {
             return returnError('缺少必要参数post_type');
         }
         $user_id = $this->request->getAttribute('user_id');
@@ -109,11 +109,21 @@ class PostsController extends AbstractController
     }
 
     #[Middleware(ApiMiddleware::class)]
+    #[Scene('like')]
+    public function like(PostsRequest $request)
+    {
+        $user_id = $this->request->getAttribute('user_id');
+        $params = $request->validated();
+        $this->service->like($params['post_id'], $user_id, $params['status']);
+        return returnSuccess([], $params['status'] ? '点赞成功' : '已取消');
+    }
+
+    #[Middleware(ApiMiddleware::class)]
     public function share()
     {
         $user_id = $this->request->getAttribute('user_id');
         $post_id = $this->request->input('post_id');
-        if(empty($post_id)){
+        if (empty($post_id)) {
             return returnError('参数错误');
         }
         $this->service->share($user_id, $post_id);

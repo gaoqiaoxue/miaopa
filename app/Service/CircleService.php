@@ -105,6 +105,7 @@ class CircleService
     }
 
     public function getInfo(int $circle_id, array $cate = [], array $params = []): object
+
     {
         if (empty($circle_id))
             throw new ParametersException('请传入圈子ID');
@@ -388,10 +389,10 @@ LIMIT :limit;';
             }
         }
         if(in_array('admin_relations', $cate)){
-            $item->relations = $this->getRelations($item->relation_type, json_decode($item->relation_ids, true, 'admin'));
+            $item->relations = $this->getRelations($item->relation_type, json_decode($item->relation_ids, true), 'admin');
         }
         if(in_array('relations', $cate)){
-            $item->relations = $this->getRelations($item->relation_type, json_decode($item->relation_ids, true, 'api', 20));
+            $item->relations = $this->getRelations($item->relation_type, json_decode($item->relation_ids, true),'api', 20);
         }
         if(in_array('post_count', $cate)){
             $post_counts = Db::table('post')

@@ -40,7 +40,7 @@ class CommentController extends AbstractController
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $comment_id = $this->request->input('answer_id', 0);
         $detail = $this->service->getCommentDetail((int)$comment_id, (int)$user_id);
-        $detail->post_info = $postsService->getInfo($detail->post_id,['is_like'], (int)$user_id);
+        $detail->post_info = $postsService->getInfo($detail->post_id, ['is_like'], (int)$user_id);
         return returnSuccess($detail);
     }
 
@@ -49,7 +49,7 @@ class CommentController extends AbstractController
     {
         $user_id = $this->request->getAttribute('user_id');
         $answer_id = $this->request->input('answer_id', 0);
-        if(empty($answer_id)){
+        if (empty($answer_id)) {
             return returnError('参数错误');
         }
         $this->service->answerShare($user_id, $answer_id);
@@ -107,7 +107,7 @@ class CommentController extends AbstractController
         $params = $request->validated();
         $user_id = $this->request->getAttribute('user_id');
         $this->service->like($params['comment_id'], $user_id, $params['status'] ?? 1);
-        return returnSuccess();
+        return returnSuccess([], $params['status'] ? '点赞成功' : '已取消');
     }
 
 

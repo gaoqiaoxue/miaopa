@@ -46,7 +46,7 @@ class CommentService
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['comment.id', 'comment.content', 'comment.create_time', 'comment.user_id', 'user.nickname'])
+        $data = $query->select(['comment.id', 'comment.content', 'comment.is_top', 'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
             ->orderBy('comment.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
@@ -58,7 +58,7 @@ class CommentService
         $comment = Db::table('comment')
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
             ->where(['comment.id' => $comment_id])
-            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
+            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.is_top', 'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
             ->first();
         if (!$comment) {
             throw new LogicException('评论不存在');
@@ -87,12 +87,12 @@ class CommentService
     {
         $comment = Db::table('comment')
             ->where('id', '=', $comment_id)
-            ->first(['id', 'source', 'audit_status']);
+            ->first(['id', 'user_id', 'post_id', 'parent_id', 'answer_id', 'at_user_id', 'source', 'audit_status']);
         if (empty($comment)) {
-            throw new LogicException('帖子不存在');
+            throw new LogicException('评论不存在');
         }
         if ($comment->audit_status != AuditStatus::PENDING->value) {
-            throw new LogicException('帖子已经审核过了');
+            throw new LogicException('评论已经审核过了');
         }
         Db::beginTransaction();
         try {
@@ -101,6 +101,17 @@ class CommentService
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
             $this->auditService->pass(AuditType::COMMENT->value, $comment_id, $cur_user_id);
+            if (empty($comment->parent_id) && empty($comment->answer_id)) {
+                $post = Db::table('post')->where(['id' => $comment->post_id])->first(['id', 'user_id']);
+                $this->commentSuccess($comment->user_id, $comment_id, $post->id, $post->user_id);
+            }else{
+                if(!empty($comment->at_user_id)){
+                    $be_comment_uid = $comment->at_user_id;
+                }else{
+                    $be_comment_uid = Db::table('comment')->where(['id' => $comment->parent_id])->value('user_id');
+                }
+                $this->replySuccess($comment->user_id, $comment_id, $comment->parent_id, $be_comment_uid);
+            }
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -155,10 +166,7 @@ class CommentService
                 'update_time' => date('Y-m-d H:i:s')
             ];
             $comment_id = Db::table('comment')->insertGetId($comment);
-            $comment['id'] = $comment_id;
             $this->auditService->addAuditRecord(AuditType::COMMENT->value, $comment_id, $user_id);
-            Db::table('post')->where('id', $post_id)->increment('comment_count', 1);
-            $this->commentSuccess($user_id, $comment, (array)$post);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -168,15 +176,16 @@ class CommentService
     }
 
     // 评论成功奖励
-    protected function commentSuccess(int $user_id, array $comment, array $post)
+    protected function commentSuccess(int $user_id, int $comment_id, int $post_id, int $post_user_id)
     {
+        Db::table('post')->where('id', $post_id)->increment('comment_count', 1);
         // 金币奖励
-        $this->creditService->finishCoinTask($user_id, CoinCate::COMMENT, $comment['id'], '参与讨论');
+        $this->creditService->finishCoinTask($user_id, CoinCate::COMMENT, $comment_id, '参与讨论');
         // 声望
-        $this->creditService->finishPrestigeTask($post['user_id'], PrestigeCate::BE_COMMENTED, $comment['id'], '被回复', ReferType::COMMENT->value, $user_id);
-        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment['id'], '回复', ReferType::COMMENT->value);
+        $this->creditService->finishPrestigeTask($post_user_id, PrestigeCate::BE_COMMENTED, $comment_id, '被回复', ReferType::COMMENT->value, $user_id);
+        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment_id, '回复', ReferType::COMMENT->value);
         // 用户消息
-        $this->messageService->addCommentMessage($post['user_id'], $user_id, $comment['id']);
+        $this->messageService->addCommentMessage($post_user_id, $user_id, $comment_id);
     }
 
     // 回复
@@ -235,10 +244,7 @@ class CommentService
                 'update_time' => date('Y-m-d H:i:s')
             ];
             $comment_id = Db::table('comment')->insertGetId($current_comment);
-            $current_comment['id'] = $comment_id;
             $this->auditService->addAuditRecord(AuditType::COMMENT->value, $comment_id, $user_id);
-            Db::table('comment')->where('id', $comment->post_id)->increment('reply_count', 1);
-            $this->replySuccess($user_id, $current_comment, $comment->user_id);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -248,22 +254,23 @@ class CommentService
     }
 
     // 回复成功奖励
-    protected function replySuccess(int $user_id, array $comment, int $be_commented_uid)
+    protected function replySuccess(int $user_id, int $comment_id, int $parent_id, int $be_commented_uid)
     {
+        Db::table('comment')->where('id', $parent_id)->increment('reply_count', 1);
         // 金币奖励
-        $this->creditService->finishCoinTask($user_id, CoinCate::COMMENT, $comment['id'], '参与讨论');
+        $this->creditService->finishCoinTask($user_id, CoinCate::COMMENT, $comment_id, '参与讨论');
         // 声望
-        $this->creditService->finishPrestigeTask($be_commented_uid, PrestigeCate::BE_COMMENTED, $comment['id'], '被回复', ReferType::COMMENT->value, $user_id);
-        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment['id'], '回复', ReferType::COMMENT->value);
+        $this->creditService->finishPrestigeTask($be_commented_uid, PrestigeCate::BE_COMMENTED, $comment_id, '被回复', ReferType::COMMENT->value, $user_id);
+        $this->creditService->finishPrestigeTask($user_id, PrestigeCate::COMMENT, $comment_id, '回复', ReferType::COMMENT->value);
         // 用户消息
-        $this->messageService->addCommentMessage($be_commented_uid, $user_id, $comment['id'], MessageCate::REPLY);
+        $this->messageService->addCommentMessage($be_commented_uid, $user_id, $comment_id, MessageCate::REPLY);
     }
 
     public function getCommentList(array $params, int $user_id, array $cate = []): array
     {
         $query = Db::table('comment')
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
-            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0])
+            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0, 'comment.audit_status' => AuditStatus::PASSED->value])
             ->where('comment.parent_id', '=', 0);
         if (!empty($params['post_id'])) {
             $query->where('comment.post_id', $params['post_id']);
@@ -273,7 +280,8 @@ class CommentService
         }
         $page = empty($params['page']) ? 1 : intval($params['page']);
         $page_size = empty($params['page_size']) ? 15 : intval($params['page_size']);
-        $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
+        $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
+            'comment.reply_count', 'comment.like_count', 'comment.create_time',
             'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
             ->orderBy('comment.is_top', 'desc')
             ->orderBy('comment.create_time', 'desc')
@@ -287,15 +295,16 @@ class CommentService
         return $data;
     }
 
-    public function getReplyList(array $params, int $user_id = 0, array $cate = []): array
+    public function getReplyList(array $params, int $user_id = 0, array $cate = ['is_like', 'at_user']): array
     {
         $query = Db::table('comment')
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
-            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0])
+            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0, 'comment.audit_status' => AuditStatus::PASSED->value])
             ->where('comment.parent_id', $params['comment_id']);
         $start = empty($params['next_num']) ? 0 : intval($params['next_num']);
         $limit = empty($params['limit']) ? 10 : intval($params['limit']);
-        $list = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
+        $list = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
+            'comment.reply_count', 'comment.like_count', 'comment.create_time', 'comment.at_user_id',
             'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
             ->orderBy('comment.create_time', 'desc')
             ->limit($limit)
@@ -304,7 +313,15 @@ class CommentService
             ->toArray();
         $comment_ids = array_column($list, 'id');
         $like_ids = $this->getUserCommentLikes($user_id, $comment_ids);
+        $at_user_ids = array_column($list, 'at_user_id');
+        $at_user_ids = array_unique($at_user_ids);
+        $at_users = Db::table('user')->whereIn('id', $at_user_ids)->get(['id', 'nickname', 'avatar'])->toArray();
+        $at_users = array_column($at_users, null, 'id');
+        foreach ($at_users as $user) {
+            $user->avatar = getAvatar($user->avatar);
+        }
         foreach ($list as $item) {
+            $item->at_user = $at_users[$item->at_user_id] ?? null;
             $this->objectTransformer($item, $cate, ['user_id' => $user_id, 'like_ids' => $like_ids]);
         }
         return ['next_num' => count($list) == $limit ? $start + $limit : 0, 'items' => $list];
@@ -349,7 +366,7 @@ class CommentService
             if ($item->reply_count == 0) {
                 $item->reply = ['next_num' => 0, 'data' => []];
             }
-            $item->reply = $this->getReplyList(['comment_id' => $item->id, 'limit' => 1], $params['user_id'] ?? 0, ['is_like']);
+            $item->reply = $this->getReplyList(['comment_id' => $item->id, 'limit' => 1], $params['user_id'] ?? 0);
         }
     }
 

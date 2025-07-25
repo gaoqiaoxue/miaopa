@@ -33,7 +33,7 @@ class PostsService
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
             'post.audit_status', 'post.circle_id', 'circle.name as circle_name',
-            'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time'])
+            'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time', 'post.del_flag'])
             ->orderBy('post.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
@@ -45,13 +45,13 @@ class PostsService
     {
         if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
             $cate = ['cover', 'is_like', 'publish_time'];
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $cate = ['publish_time'];
             $params['has_circle'] = true;
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
@@ -89,15 +89,15 @@ class PostsService
             ->leftJoin('user', 'user.id', '=', 'post.user_id');
         if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
             $cate = ['cover', 'is_like', 'publish_time'];
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $cate = ['publish_time'];
             $query->leftJoin('circle', 'circle.id', '=', 'post.circle_id');
-            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media','post.media_type',
+            $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.avatar as user_avatar', 'user.nickname','post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -158,9 +158,11 @@ class PostsService
             $query->whereBetween('post.create_time', [$params['start_time'], $params['end_time']]);
         }
         if (isset($params['is_reported'])) {
-            $query->where('is_reported', '=', 0);
+            $query->where('post.is_reported', '=', 0);
         }
-        $query->where('del_flag', '=', 0);
+        if(!isset($params['with_del'])){
+            $query->where('post.del_flag', '=', 0);
+        }
         return $query;
     }
 
@@ -170,9 +172,9 @@ class PostsService
             ->leftJoin('circle', 'circle.id', '=', 'post.circle_id')
             ->leftJoin('user', 'user.id', '=', 'post.user_id')
             ->where('post.id', '=', $post_id)
-            ->select(['post.id', 'post.title', 'post.content', 'post.media', 'post.media_type','post.post_type',
-                'post.audit_status', 'post.audit_result', 'post.circle_id', 'circle.cover as circle_cover', 'circle.name as circle_name',
-                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'])
+            ->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
+                'post.circle_id', 'circle.cover as circle_cover', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
+                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.audit_result', 'post.create_time'])
             ->first();
         if (!$post) {
             throw new LogicException('帖子不存在');
@@ -285,14 +287,14 @@ class PostsService
                 'source' => $source,
                 'audit_status' => $source == 'user' ? AuditStatus::PENDING->value : AuditStatus::PASSED->value,
             ]);
-            if($source == 'user'){
+            if ($source == 'user') {
                 // 添加审核记录
                 $this->auditService->addAuditRecord(AuditType::POST->value, $post_id, $user_id);
             }
             // 帖子发布成功
-            $this->publishSuccess($user_id,$params['post_type'],$post_id);
+            $this->publishSuccess($user_id, $params['post_type'], $post_id);
             Db::commit();
-        }catch (\Throwable $ex){
+        } catch (\Throwable $ex) {
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
@@ -305,9 +307,9 @@ class PostsService
         // 金币奖励
         $this->creditService->finishCoinTask($user_id, CoinCate::POST, $post_id, '发布帖子');
         // 声望奖励
-        if($post_type == PostType::DYNAMIC->value){
+        if ($post_type == PostType::DYNAMIC->value) {
             $this->creditService->finishPrestigeTask($user_id, PrestigeCate::DYNAMIC, $post_id, '发布动态');
-        }else{
+        } else {
             $this->creditService->finishPrestigeTask($user_id, PrestigeCate::QA, $post_id, '发布问答');
         }
     }
@@ -323,7 +325,7 @@ class PostsService
         $post = Db::table('post')
             ->where('id', '=', $post_id)
             ->first(['id', 'source', 'audit_status', 'user_id']);
-        if(empty($post)){
+        if (empty($post)) {
             throw new LogicException('帖子不存在');
         }
         Db::beginTransaction();

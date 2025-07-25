@@ -201,7 +201,7 @@ class RoleService
     {
         $role = Db::table('role')
             ->where('id', '=', $role_id)
-            ->first(['id', 'audit_status']);
+            ->first(['id', 'circle_id', 'audit_status']);
         if ($role->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('该角色已经审核过了');
         }
@@ -240,6 +240,7 @@ class RoleService
             ]);
         }elseif (!$is_add && in_array($role_id,$relation_ids)){
             $relation_ids = array_diff($relation_ids, [$role_id]);
+            $relation_ids = array_values($relation_ids);
             Db::table('circle')->where('id', '=', $circle_id)->update([
                 'relation_ids' => json_encode($relation_ids),
             ]);
