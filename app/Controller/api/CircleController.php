@@ -7,6 +7,7 @@ use App\Library\Contract\AuthTokenInterface;
 use App\Middleware\ApiMiddleware;
 use App\Request\CircleRequest;
 use App\Service\CircleService;
+use App\Service\CircleStaticsService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
@@ -85,12 +86,13 @@ class CircleController extends AbstractController
      * @return array
      */
     #[Scene('circle_id')]
-    public function detail(CircleRequest $request, AuthTokenInterface $authToken): array
+    public function detail(CircleRequest $request, AuthTokenInterface $authToken, CircleStaticsService $staticsService): array
     {
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $circle_id = $request->input('circle_id', 0);
         $list = $this->service->getInfo($circle_id, ['is_follow', 'relations'], ['user_id' => $user_id]);
+        $staticsService->incrementClick($circle_id);
         return returnSuccess($list);
     }
 

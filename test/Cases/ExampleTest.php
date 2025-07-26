@@ -16,6 +16,7 @@ use App\Constants\AbleStatus;
 use App\Constants\IsRisky;
 use App\Library\WechatMiniAppLib;
 use App\Service\CircleService;
+use App\Service\CircleStaticsService;
 use App\Service\PostsService;
 use Hyperf\DbConnection\Db;
 use Hyperf\Testing\TestCase;
@@ -29,8 +30,9 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $service = make(PostsService::class);
-        $res = $service->getApiList(['is_reported' => 0, 'audit_status' => 1], false, 3, true);
+        $service = make(CircleStaticsService::class);
+        $date = date('Y-m-d');
+        $res = $service->getRawDailyRanking($date);
         var_dump($res);
         $this->assertTrue(true, '111');
     }

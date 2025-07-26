@@ -28,7 +28,7 @@ class BasicController extends AbstractController
      * 数据字典
      * @return array
      */
-    public function dictionary(): array
+    public function dictionary(ConfigService $service): array
     {
         return returnSuccess([
             'status' => AbleStatus::getMaps(),
@@ -43,7 +43,8 @@ class BasicController extends AbstractController
             'audit_status' => AuditStatus::getMaps(),
             'report_type' => ReportType::getMaps(),
             'report_reason' => ReportReason::getMaps(),
-            'file_url' => \Hyperf\Support\env('FILE_HOST')
+            'file_url' => \Hyperf\Support\env('FILE_HOST'),
+            'stay_time_config' => $service->getValue('stay_time_config')
         ]);
     }
 

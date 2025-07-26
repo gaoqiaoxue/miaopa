@@ -5,6 +5,7 @@ namespace App\Controller\admin;
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
 use App\Service\AuditService;
+use App\Service\CircleStaticsService;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
@@ -125,16 +126,14 @@ class IndexController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function circleTrend()
+    public function circleTrend(CircleStaticsService $service)
     {
         $type = $this->request->input('type', 1);
-        $list = [
-            ['name' => '圈子111', 'count' => 888, 'compare_status' => 1],
-            ['name' => '圈子222', 'count' => 678, 'compare_status' => 0],
-            ['name' => '圈子333', 'count' => 456, 'compare_status' => 1],
-            ['name' => '圈子444', 'count' => 345, 'compare_status' => 0],
-            ['name' => '圈子555', 'count' => 234, 'compare_status' => 1],
-        ];
+        if($type == 1){
+            $list = $service->getDailyRankingWithTrend();
+        }else{
+            $list = $service->getPeriodRankingWithTrend(7);
+        }
         return returnSuccess($list);
     }
 }

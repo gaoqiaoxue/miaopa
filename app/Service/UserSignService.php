@@ -29,17 +29,18 @@ class UserSignService
         $days = $sign['is_signed'] ? $sign['continuous_days'] : $sign['continuous_days'] + 1; // 今天是签到的第几天
 
         $records = [];
+        $yesterday = Carbon::yesterday()->startOfDay()->toDateString();
         if ($sign['continuous_days'] > 0) {
-            $yesterday = Carbon::yesterday()->startOfDay()->timestamp;
             $records = Db::table('user_sign_record')
                 ->where('user_id', $user_id)
                 ->where('sign_time', '>=', $yesterday)
-                ->pluck(Db::raw('coin + continuous_coin as sum'), 'date')
+                ->select(['date', Db::raw('coin + continuous_coin as sum')])
+                ->get()
                 ->toArray();
+            $records = array_column($records, 'sum', 'date');
         }
         if ($days >= 2) { // 昨天已经签到
-            $yesterday_date = date('Y-m-d', $yesterday);
-            $yesterday_coin = $records[$yesterday_date] ?? 0;
+            $yesterday_coin = $records[$yesterday] ?? 0;
             $sign_list[] = ['day' => '已签', 'is_signed' => 1, 'coins' => $yesterday_coin];
         }
         if ($sign['is_signed']) {
@@ -55,14 +56,27 @@ class UserSignService
         for ($i = 2; $i <= 8 - $has; $i++) {
             $sign_list[] = ['day' => '第' . $days + $i . '天', 'is_signed' => 0, 'coins' => $daily_coins + ($continuous_coin_set[$days + $i] ?? 0)];
         }
+        $continuous_task = [];
         foreach ($continuous_sign as &$item) {
-            $item['is_finished'] = $sign['continuous_days'] >= $item['time'] ? 1 : 0;
+            $item['is_finished'] = $sign['is_signed'];
+            $item['continuous_days'] = $sign['continuous_days'];
+            $continuous_task = $item;
+            $finished = $sign['continuous_days'] >= $item['time'] ? 1 : 0;
+            if($finished == 0){
+                break;
+            }
         }
         $coin_finish_status = $this->creditService->getCoinTask($user_id);
         $stay_time_config = $config->stay_time_config;
         $stay_time = $coin_finish_status['stay'] ?? 0;
+        $stay_task = [];
         foreach ($stay_time_config as &$item){
+            $item['stay_time'] = $stay_time;
             $item['is_finished'] = $stay_time >= $item['time'] ? 1 : 0;
+            $stay_task = $item;
+            if($item['is_finished'] == 0){
+                break;
+            }
         }
         return [
             'coin' => $coin,
@@ -71,7 +85,8 @@ class UserSignService
             'daily_coins' => $daily_coins,
             'sign_list' => $sign_list,
             'task' => [
-                'continuous_sign' => $continuous_sign,
+//                'continuous_sign' => $continuous_sign,
+                'continuous' => $continuous_task,
                 'post' => [
                     'coins' => $config->post_coins,
                     'is_finished' => $coin_finish_status['post'] ?? 0,
@@ -84,7 +99,8 @@ class UserSignService
                     'coins' => $config->activity_coins,
                     'is_finished' => $coin_finish_status['activity'] ?? 0,
                 ],
-                'stay_time' => $stay_time_config,
+//                'stay_time' => $stay_time_config,
+                'stay' => $stay_task
             ],
         ];
     }
