@@ -23,14 +23,8 @@ class ActivityService
     #[Inject]
     protected CreditService $creditService;
 
-    public function __construct()
-    {
-        $this->checkStatus();
-    }
-
     // 检查活动状态
-    #[Cacheable(prefix: 'activity_status', ttl: 60)]
-    protected function checkStatus()
+    public function checkStatus()
     {
         $current = time();
         Db::table('activity')

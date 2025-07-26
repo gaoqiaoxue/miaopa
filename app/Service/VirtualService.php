@@ -235,6 +235,7 @@ class VirtualService
         return $data;
     }
 
+    // 穿上
     public function active(int $user_id, int $exchange_id)
     {
         $exchange = Db::table('virtual_exchange')
@@ -274,6 +275,7 @@ class VirtualService
         return true;
     }
 
+    // 卸下
     public function cancel(int $user_id, int $exchange_id)
     {
         $res = Db::table('virtual_exchange')

@@ -42,7 +42,7 @@ class ReportService
         if (!empty($params['report_reason'])) {
             $query->where('report.report_reason', '=', $params['report_reason']);
         }
-        if (isset($params['audit_status']) && in_array($params['audit_stauts'], AuditStatus::getKeys())) {
+        if (isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
             $query->where('report.audit_status', '=', $params['audit_status']);
         }
         if (!empty($params['start_time']) && !empty($params['end_time'])) {
@@ -52,7 +52,7 @@ class ReportService
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['report.id', 'report.report_type', 'report.report_reason', 'report.description',
-            'report.audit_status', 'report.audit_result', 'report.create_time', 'user.nickname'])
+            'report.audit_status', 'report.audit_result', 'report.create_time','report.user_id', 'user.nickname'])
             ->orderBy('report.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
@@ -75,7 +75,7 @@ class ReportService
             $content = $this->postsService->getInfo($info->content_id);
         } elseif ($info->report_type == ReportType::COMMENT->value) {
             $content = $this->commentService->getInfo($info->content_id);
-            $content->post = $this->postsService->getInfo($info->post_id);
+            $content->post = $this->postsService->getInfo($content->post_id);
         }
         $info->content = $content;
         return $info;
