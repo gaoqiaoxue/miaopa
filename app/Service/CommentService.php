@@ -172,6 +172,7 @@ class CommentService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
+        $this->pass($comment_id, 1); // TODO 自动审核通过
         return true;
     }
 
@@ -250,6 +251,7 @@ class CommentService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
+        $this->pass($comment_id, 1); // TODO 自动审核通过
         return true;
     }
 

@@ -29,23 +29,9 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $sql = "SELECT 
-    c.id, c.name, c.cover, c.relation_type, c.relation_ids,
-    CASE WHEN cf.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_follow
-FROM 
-    mp_circle c
-LEFT JOIN 
-    mp_circle_follow cf ON c.id = cf.circle_id AND cf.user_id = :userId
-WHERE 
-    c.status = :status
-ORDER BY 
-    is_follow DESC, 
-    c.is_hot DESC, 
-    c.weight DESC, 
-    c.id DESC
-LIMIT 10";
-        $circles = Db::select($sql, ['userId' => 1, 'status' => AbleStatus::ENABLE->value]);
-        var_dump($circles);
+        $service = make(PostsService::class);
+        $res = $service->getApiList(['is_reported' => 0, 'audit_status' => 1], false, 3, true);
+        var_dump($res);
         $this->assertTrue(true, '111');
     }
 }

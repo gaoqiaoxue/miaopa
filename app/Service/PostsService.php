@@ -11,6 +11,7 @@ use App\Constants\PrestigeCate;
 use App\Constants\ReferType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
+use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 
@@ -41,24 +42,54 @@ class PostsService
 
     }
 
-    public function getApiList(array $params, bool $is_paginate = true, int $limit = 0): array
+
+    #[Cacheable(prefix: 'post_recomment_max_value', ttl: 600)]
+    protected function getPostRecommendMax(): object
     {
+        $maxValues = Db::table('post')
+            ->select([
+                Db::raw('MAX(view_count) as max_views'),
+                Db::raw('MAX(like_count) as max_likes'),
+                Db::raw('MAX(comment_count) as max_comments'),
+                Db::raw('UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(MIN(create_time)) as max_time_diff')
+            ])
+            ->where('audit_status', 1)
+            ->where('is_reported', 0)
+            ->where('del_flag', 0)
+            ->first();
+        return $maxValues;
+    }
+
+    public function getApiList(array $params, bool $is_paginate = true, int $limit = 0, bool $recommendOrder = false): array
+    {
+        $cate = ['cover', 'is_like', 'publish_time'];
         if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
-            $cate = ['cover', 'is_like', 'publish_time'];
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
-            $cate = ['publish_time'];
             $params['has_circle'] = true;
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
                 'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
         $query = $this->buildQuery($params);
-        $query = $query->select($columns);
-        // TODO 前端接口综合排序 并且需要可考虑下架 投诉等
-        $query->orderBy('post.create_time', 'desc');
+        if($recommendOrder){
+            $maxValues = $this->getPostRecommendMax();
+            $columns[] = Db::raw('(
+                (mp_post.view_count / ' . ($maxValues->max_views ?: 1) . ' * 2.5) + 
+                (mp_post.comment_count / ' . ($maxValues->max_comments ?: 1) . ' * 2.5) + 
+                (mp_post.like_count / ' . ($maxValues->max_likes ?: 1) . ' * 3) + 
+                ((1 - ((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(mp_post.create_time)) / ' . ($maxValues->max_time_diff ?: 1) . ')) * 2)
+                ) AS recommendation_score'
+            );
+            $query->select($columns)
+                ->orderBy('recommendation_score', 'desc')
+                ->orderBy('post.id', 'desc');
+        }else{
+            $query = $query->select($columns)
+                ->orderBy('post.id', 'desc');
+        }
         if ($is_paginate) {
             $page = !empty($params['page']) ? $params['page'] : 1;
             $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -160,7 +191,7 @@ class PostsService
         if (isset($params['is_reported'])) {
             $query->where('post.is_reported', '=', 0);
         }
-        if(!isset($params['with_del'])){
+        if (!isset($params['with_del'])) {
             $query->where('post.del_flag', '=', 0);
         }
         return $query;

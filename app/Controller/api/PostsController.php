@@ -33,7 +33,7 @@ class PostsController extends AbstractController
         $payload = $authToken->getUserData('default', false);
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $params['current_user_id'] = $user_id;
-        $list = $this->service->getApiList($params);
+        $list = $this->service->getApiList($params,true,0, true);
         return returnSuccess($list);
     }
 

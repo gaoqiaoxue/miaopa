@@ -33,9 +33,8 @@ ReportRequest extends FormRequest
         return [
             'report_id' => 'required|integer',
             'mute_time' => 'integer',
-            'reject_reason' => 'required|string',
             'report_reason' => 'required|integer',
-            'description' => 'required|string',
+            'description' => 'string',
             'images' => 'array',
             'post_id' => 'required|integer',
             'comment_id' => 'required|integer',
