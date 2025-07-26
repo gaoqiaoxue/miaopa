@@ -30,6 +30,7 @@ class CommentController extends AbstractController
         if (empty($params['post_id'])) {
             return returnError('参数错误');
         }
+        $params['answer_id'] = 0;
         $list = $this->service->getCommentList((array)$params, (int)$user_id, ['is_like']);
         return returnSuccess($list);
     }

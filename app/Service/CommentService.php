@@ -104,13 +104,14 @@ class CommentService
             if (empty($comment->parent_id) && empty($comment->answer_id)) {
                 $post = Db::table('post')->where(['id' => $comment->post_id])->first(['id', 'user_id']);
                 $this->commentSuccess($comment->user_id, $comment_id, $post->id, $post->user_id);
-            }else{
-                if(!empty($comment->at_user_id)){
+            } else {
+                $parent_id = empty($comment->parent_id) ? $comment->answer_id : $comment->parent_id;
+                if (!empty($comment->at_user_id)) {
                     $be_comment_uid = $comment->at_user_id;
-                }else{
-                    $be_comment_uid = Db::table('comment')->where(['id' => $comment->parent_id])->value('user_id');
+                } else {
+                    $be_comment_uid = Db::table('comment')->where(['id' => $parent_id])->value('user_id');
                 }
-                $this->replySuccess($comment->user_id, $comment_id, $comment->parent_id, $be_comment_uid);
+                $this->replySuccess($comment->user_id, $comment_id, $parent_id, $be_comment_uid);
             }
             Db::commit();
         } catch (\Throwable $ex) {
@@ -277,7 +278,7 @@ class CommentService
         if (!empty($params['post_id'])) {
             $query->where('comment.post_id', $params['post_id']);
         }
-        if (!empty($params['answer_id'])) {
+        if (isset($params['answer_id'])) {
             $query->where('comment.answer_id', $params['answer_id']);
         }
         $page = empty($params['page']) ? 1 : intval($params['page']);
@@ -334,7 +335,8 @@ class CommentService
         $comment = Db::table('comment')
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
             ->where(['comment.id' => $comment_id])
-            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.reply_count', 'comment.create_time',
+            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
+                'comment.reply_count', 'comment.like_count', 'comment.create_time',
                 'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
             ->first();
         if (!$comment) {
