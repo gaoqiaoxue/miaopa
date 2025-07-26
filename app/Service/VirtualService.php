@@ -307,6 +307,18 @@ class VirtualService
     // 卸下
     public function cancel(int $user_id, int $exchange_id)
     {
+        $exchange = Db::table('virtual_exchange')
+            ->where('id', $exchange_id)
+            ->where('user_id', $user_id)
+            ->first();
+        if (empty($exchange)) {
+            throw new LogicException('兑换记录不存在');
+        }
+        if($exchange->item_type == VirtualType::FIGURE->value){
+            Db::table('user')
+                ->where('id', $user_id)
+                ->update(['avatar_icon' => $exchange['avatar']]);
+        }
         $res = Db::table('virtual_exchange')
             ->where('id', $exchange_id)
             ->where('user_id', $user_id)
@@ -337,5 +349,23 @@ class VirtualService
             ->where('del_flag', '=', 0)
             ->value('avatar');
         return generateFileUrl($avatar);
+    }
+
+    public function checkActive()
+    {
+        $list = Db::table('virtual_exchange')
+            ->where('valid_time', '<', time())
+            ->select()
+            ->toArray();
+        foreach ($list as $item){
+            if($item->is_active && $item->item_type ==  VirtualType::FIGURE->value){
+                Db::table('user')
+                    ->where('id', '=', $item->user_id)
+                    ->update(['avatar_icon' => '']);
+            }
+            Db::table('virtual_exchange')
+                ->where('id', '=', $item['id'])
+                ->update(['status' => 0, 'is_active' => 0]);
+        }
     }
 }

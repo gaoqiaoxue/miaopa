@@ -7,7 +7,7 @@ use App\Service\ActivityService;
 use Hyperf\Crontab\Annotation\Crontab;
 use Hyperf\Di\Annotation\Inject;
 
-#[Crontab(name: "PersistCircleStats", rule: "*/5 * * * *", memo: "持久化圈子点击量")]
+#[Crontab(name: "ActivityStatusCheck", rule: "*/5 * * * *", memo: "活动状态变更")]
 class ActivityStatusCheckTask
 {
     #[Inject]
