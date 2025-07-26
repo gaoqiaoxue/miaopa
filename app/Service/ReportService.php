@@ -86,7 +86,7 @@ class ReportService
     {
         $report = Db::table('report')
             ->where('id', '=', $report_id)
-            ->first(['id', 'report_type', 'content_id', 'content_user_id', 'audit_status']);
+            ->first(['id', 'user_id', 'report_type', 'content_id', 'content_user_id', 'audit_status']);
         if ($report->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('该举报信息已经审核过了');
         }
@@ -176,10 +176,10 @@ class ReportService
 
     protected function reportSuccess(array $report)
     {
-        $refer_type = match ($report['report_type']) {
+        $refer_type = match ((int)$report['report_type']) {
             ReportType::POST->value => ReferType::POST->value,
             ReportType::COMMENT->value => ReferType::COMMENT->value,
-            default => throw new LogicException('举报类型错误')
+            default => throw new LogicException('举报类型错误'.$report['report_type'])
         };
         // 声望
         $this->creditService->finishPrestigeTask($report['user_id'], PrestigeCate::REPORT, $report['id'], '举报成功', $refer_type);

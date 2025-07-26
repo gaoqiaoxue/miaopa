@@ -38,6 +38,7 @@ ReportRequest extends FormRequest
             'images' => 'array',
             'post_id' => 'required|integer',
             'comment_id' => 'required|integer',
+            'reject_reason' => 'required|string',
         ];
     }
 
