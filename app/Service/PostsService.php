@@ -26,6 +26,9 @@ class PostsService
     #[Inject]
     protected MessageService $messageService;
 
+    #[Inject]
+    protected VirtualService $virtualService;
+
     public function getList(array $params): array
     {
         $params['has_circle'] = true;
@@ -66,12 +69,12 @@ class PostsService
         if (!empty($params['post_type']) && $params['post_type'] == PostType::DYNAMIC) {
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $params['has_circle'] = true;
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
         $query = $this->buildQuery($params);
         if($recommendOrder){
@@ -122,13 +125,13 @@ class PostsService
             $cate = ['cover', 'is_like', 'publish_time'];
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon', 'user.nickname', 'post.audit_status', 'post.create_time'];
         } else {
             $cate = ['publish_time'];
             $query->leftJoin('circle', 'circle.id', '=', 'post.circle_id');
             $columns = ['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.audit_status', 'post.circle_id', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.create_time'];
+                'post.user_id', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
@@ -205,7 +208,7 @@ class PostsService
             ->where('post.id', '=', $post_id)
             ->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.media', 'post.media_type',
                 'post.circle_id', 'circle.cover as circle_cover', 'circle.name as circle_name', 'post.view_count', 'post.comment_count', 'post.like_count',
-                'post.user_id', 'user.avatar as user_avatar', 'user.nickname', 'post.audit_status', 'post.audit_result', 'post.create_time'])
+                'post.user_id', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon', 'user.nickname', 'post.audit_status', 'post.audit_result', 'post.create_time'])
             ->first();
         if (!$post) {
             throw new LogicException('帖子不存在');
@@ -221,6 +224,8 @@ class PostsService
                 'id' => $item->user_id,
                 'avatar' => getAvatar($item->user_avatar),
                 'nickname' => $item->nickname,
+                'show_icon' => $item->show_icon,
+                'avatar_icon' => $item->show_icon ? (!empty($item->avatar_icon) ? generateFileUrl($item->avatar_icon) : $this->virtualService->getDefaultAvatarIcon()) : '',
             ];
         }
         if (property_exists($item, 'circle_cover')) {

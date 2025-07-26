@@ -25,6 +25,9 @@ class CommentService
     #[Inject]
     protected MessageService $messageService;
 
+    #[Inject]
+    protected VirtualService $virtualService;
+
     public function getList(array $params): array
     {
         $query = Db::table('comment')
@@ -285,7 +288,7 @@ class CommentService
         $page_size = empty($params['page_size']) ? 15 : intval($params['page_size']);
         $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
             'comment.reply_count', 'comment.like_count', 'comment.create_time',
-            'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
+            'comment.user_id', 'user.nickname', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon'])
             ->orderBy('comment.is_top', 'desc')
             ->orderBy('comment.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
@@ -308,7 +311,7 @@ class CommentService
         $limit = empty($params['limit']) ? 10 : intval($params['limit']);
         $list = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
             'comment.reply_count', 'comment.like_count', 'comment.create_time', 'comment.at_user_id',
-            'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
+            'comment.user_id', 'user.nickname', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon'])
             ->orderBy('comment.create_time', 'desc')
             ->limit($limit)
             ->offset($start)
@@ -337,7 +340,7 @@ class CommentService
             ->where(['comment.id' => $comment_id])
             ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
                 'comment.reply_count', 'comment.like_count', 'comment.create_time',
-                'comment.user_id', 'user.nickname', 'user.avatar as user_avatar'])
+                'comment.user_id', 'user.nickname', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon'])
             ->first();
         if (!$comment) {
             throw new LogicException('评论不存在');
@@ -353,6 +356,8 @@ class CommentService
                 'id' => $item->user_id,
                 'avatar' => getAvatar($item->user_avatar),
                 'nickname' => $item->nickname,
+                'show_icon' => $item->show_icon,
+                'avatar_icon' => $item->show_icon ? (!empty($item->avatar_icon) ? generateFileUrl($item->avatar_icon) : $this->virtualService->getDefaultAvatarIcon()) : '',
             ];
         }
         if (property_exists($item, 'images')) {

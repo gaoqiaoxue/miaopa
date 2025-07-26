@@ -60,13 +60,13 @@ class CreditService
         return $info['prestige'] ?? 0;
     }
 
-    #[CacheEvict(prefix: 'user_credit', value: "_#{user_id}")]
+    #[CacheEvict(prefix: 'user_credit', value: "#{user_id}")]
     public function setCoin(int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = '', int $refer_type = 0, int $refer_uid = 0): bool
     {
         return $this->setCreditLog('coin', $user_id, $num, $cate, $refer_id, $remark, $refer_type, $refer_uid);
     }
 
-    #[CacheEvict(prefix: 'user_credit', value: "_#{user_id}")]
+    #[CacheEvict(prefix: 'user_credit', value: "#{user_id}")]
     public function setPrestige(int $user_id, int $num, string $cate, int $refer_id = 0, string $remark = '', int $refer_type = 0, int $refer_uid = 0): bool
     {
         return $this->setCreditLog('prestige', $user_id, $num, $cate, $refer_id, $remark, $refer_type, $refer_uid);

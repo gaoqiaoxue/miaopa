@@ -25,6 +25,9 @@ class UserService
     #[Inject]
     protected MediaAuditService $mediaAuditService;
 
+    #[Inject]
+    protected VirtualService $virtualService;
+
     public function getList(array $params): array
     {
         $query = $this->buildQuery($params);
@@ -101,7 +104,8 @@ class UserService
 
     public function getInfo(int $id, array $cate = ['created_days', 'prestige'], array $params = []): object
     {
-        $columns = ['id', 'name', 'username', 'nickname', 'sex', 'avatar', 'bg', 'signature', 'region', 'school', 'mobile', 'create_time', 'fans_num', 'follow_num', 'like_num'];
+        $columns = ['id', 'name', 'username', 'nickname', 'sex', 'avatar', 'show_icon', 'avatar_icon', 'show_medal',
+            'bg', 'signature', 'region', 'school', 'mobile', 'create_time', 'fans_num', 'follow_num', 'like_num'];
         $user = Db::table('user')->where(['id' => $id])->select($columns)->first();
         if (!$user) {
             throw new LogicException('用户不存在');
@@ -125,6 +129,17 @@ class UserService
         }
         if (property_exists($item, 'bg')) {
             $item->bg_url = generateFileUrl($item->bg);
+        }
+        if (property_exists($item, 'show_icon')) {
+            $item->avatar_icon = $item->show_icon ? (!empty($item->avatar_icon) ? generateFileUrl($item->avatar_icon) : $this->virtualService->getDefaultAvatarIcon()) : '';
+        }
+        if(in_array('medal', $cate)){
+            if($item->show_medal){
+                $virtual = $this->virtualService->getCurrent($item->id);
+                $item->medal = $virtual['medal'] ?? [];
+            }else{
+                $item->medal = [];
+            }
         }
         if (in_array('created_days', $cate)) {
             $start = strtotime($item->create_time);

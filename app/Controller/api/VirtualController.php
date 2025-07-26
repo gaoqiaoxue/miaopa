@@ -3,6 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
+use App\Library\Contract\AuthTokenInterface;
 use App\Middleware\ApiMiddleware;
 use App\Service\VirtualService;
 use Hyperf\Di\Annotation\Inject;
@@ -23,10 +24,14 @@ class VirtualController extends AbstractController
         return returnSuccess($current);
     }
 
-    public function getList(): array
+    public function getList(AuthTokenInterface $authToken): array
     {
         $params = $this->request->all();
         $params['status'] = 1;
+        $params['is_default'] = 0;
+        $payload = $authToken->getUserData('default', false);
+        $params['current_user_id'] = $payload['jwt_claims']['user_id'] ?? 0;
+        $params['check_exchange'] = true;
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }
@@ -84,6 +89,15 @@ class VirtualController extends AbstractController
             return returnError('缺少必要参数exchange_id');
         }
         $this->service->cancel($user_id, $exchange_id);
+        return returnSuccess([], '操作成功');
+    }
+
+    #[Middleware(ApiMiddleware::class)]
+    public function avatarSetting()
+    {
+        $user_id = $this->request->getAttribute('user_id');
+        $params = $this->request->all();
+        $this->service->avatarSetting($user_id, $params);
         return returnSuccess([], '操作成功');
     }
 }

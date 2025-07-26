@@ -34,7 +34,7 @@ class UserController extends AbstractController
 //            return returnSuccess([],'用户未登录');
 //        }
         $user_id = $this->request->getAttribute('user_id');
-        $user = $this->service->getInfo($user_id);
+        $user = $this->service->getInfo($user_id,['created_days', 'prestige', 'medal']);
         return returnSuccess($user);
     }
 
@@ -58,7 +58,7 @@ class UserController extends AbstractController
         }
         $payload = $authToken->getUserData('default', false);
         $current_user_id = $payload['jwt_claims']['user_id'] ?? 0;
-        $info = $this->service->getInfo($user_id, ['created_days', 'prestige', 'is_follow'], ['current_user_id' => $current_user_id]);
+        $info = $this->service->getInfo($user_id, ['created_days', 'prestige', 'is_follow', 'medal'], ['current_user_id' => $current_user_id]);
         if (!empty($current_user_id) && $current_user_id != $user_id) {
             $this->service->addHomeViewRecord($current_user_id, $user_id);
         }

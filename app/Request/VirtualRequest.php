@@ -31,14 +31,14 @@ class VirtualRequest extends FormRequest
             'virtual_id' => 'required|integer',
             'name' => 'required',
             'item_type' => 'required|in:1,2',
-            'is_default' => 'required|in:0,1',
+            'is_default' => 'in:0,1',
             'exchange_amount' => 'required|integer',
             'valid_days' => 'required|integer',
             'quantity' => 'required|integer',
             'image' => 'required|string',
             'avatar' => 'string',
             'weight' => 'integer',
-//            'status' => 'in:0,1',
+            'status' => 'in:0,1',
         ];
     }
 
