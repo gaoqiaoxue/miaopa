@@ -16,6 +16,6 @@ class ActivityStatusCheckTask
     public function execute()
     {
         $this->service->checkStatus();
-        logGet('ActivityStatusCheckTask', 'default')->info('执行成功');
+        logGet('ActivityStatusCheckTask', 'task')->info('执行成功');
     }
 }

@@ -17,5 +17,6 @@ class AvatarIconCheckTask
     public function execute()
     {
         $this->service->checkActive();
+        logGet('AvatarIconCheckTask', 'task')->info('执行成功');
     }
 }

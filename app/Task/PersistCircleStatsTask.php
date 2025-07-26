@@ -16,5 +16,6 @@ class PersistCircleStatsTask
     public function execute()
     {
         $this->statService->persistDailyStats();
+        logGet('PersistCircleStatsTask', 'task')->info('执行成功');
     }
 }
