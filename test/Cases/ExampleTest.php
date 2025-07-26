@@ -31,9 +31,7 @@ class ExampleTest extends TestCase
     public function testExample()
     {
         $service = make(CircleStaticsService::class);
-        $date = date('Y-m-d');
-        $res = $service->getRawDailyRanking($date);
-        var_dump($res);
+        $service->persistDailyStats();
         $this->assertTrue(true, '111');
     }
 }

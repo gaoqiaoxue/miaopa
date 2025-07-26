@@ -67,7 +67,7 @@ class CircleStaticsService
     /**
      * 获取原始每日排名数据
      */
-    public function getRawDailyRanking(string $date, array $circle_ids = [], int $limit = 0): array
+    private function getRawDailyRanking(string $date, array $circle_ids = [], int $limit = 0): array
     {
         if ($date === date('Y-m-d')) {
             // 今日数据从Redis获取
