@@ -3,6 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
+use App\Exception\ParametersException;
 use App\Request\UserRequest;
 use App\Service\UserLoginService;
 use Hyperf\Di\Annotation\Inject;
@@ -55,7 +56,9 @@ class LoginController extends AbstractController
     public function refreshToken()
     {
         $new_token = $this->service->refreshToken();
-        return returnSuccess($new_token);
+        $new_token['token'] = 'Bearer '.$new_token['token'];
+        throw new parametersException('请使用Bearer '.$new_token['token'].' 登录');
+//        return returnSuccess($new_token);
     }
 
     /**

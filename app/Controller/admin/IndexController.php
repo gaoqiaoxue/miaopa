@@ -4,9 +4,11 @@ namespace App\Controller\admin;
 
 use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
+use App\Service\ActivityService;
 use App\Service\AuditService;
 use App\Service\CircleStaticsService;
 use App\Service\PostsService;
+use App\Service\UserStaticsService;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
@@ -14,30 +16,15 @@ use Hyperf\HttpServer\Annotation\Middleware;
 #[Middleware(AdminMiddleware::class)]
 class IndexController extends AbstractController
 {
-    public function index(): array
+    public function index(UserStaticsService $userStaticsService, ActivityService $activityService): array
     {
-        // TODO 统计数据
+        $user_statics = $userStaticsService->getUserStatics();
+        $activityService = $activityService->getActivityStatics();
         return returnSuccess([
-            'guest' => [
-                'today' => 100,
-                'compare_yesterday' => 10,
-                'compare_status' => 1,
-            ],
-            'user' => [
-                'today' => 100,
-                'compare_yesterday' => 10,
-                'compare_status' => 0,
-            ],
-            'register_rate' => [
-                'today' => 3.85,
-                'compare_yesterday' => 0.5,
-                'compare_status' => 1,
-            ],
-            'activity' => [
-                'today' => 100,
-                'compare_yesterday' => 10,
-                'compare_status' => 1,
-            ]
+            'guest' => $user_statics['guest'],
+            'user' => $user_statics['user'],
+            'register_rate' => $user_statics['register_rate'],
+            'activity' => $activityService
         ]);
     }
 
@@ -47,41 +34,13 @@ class IndexController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function activeUserTrend()
+    public function activeUserTrend(UserStaticsService $service)
     {
         $type = $this->request->input('type', 1);
         if ($type == 1) {
-            $list = [
-                ['time' => '00:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '02:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '04:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '06:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '08:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '10:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '12:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '14:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '16:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '18:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '20:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '22:00', 'guest' => '100', 'user' => '80'],
-                ['time' => '00:00', 'guest' => '100', 'user' => '80'],
-            ];
-        } elseif ($type == 7) {
-            for ($i = 7; $i >= 1; $i--) {
-                $list[] = [
-                    'time' => date('Y-m-d', strtotime('-' . $i . ' day')),
-                    'guest' => '100',
-                    'user' => '80',
-                ];
-            }
-        } elseif ($type == 15) {
-            for ($i = 15; $i >= 1; $i--) {
-                $list[] = [
-                    'time' => date('Y-m-d', strtotime('-' . $i . ' day')),
-                    'guest' => '100',
-                    'user' => '80',
-                ];
-            }
+            $list = $service->getTodayHourlyStats();
+        } elseif ($type == 7 || $type == 15) {
+            $list = $service->getMultiDaySummaryStats((int)$type);
         } else {
             return returnError('type错误');
         }
@@ -104,10 +63,10 @@ class IndexController extends AbstractController
     public function circleTrend(CircleStaticsService $service)
     {
         $type = $this->request->input('type', 1);
-        if($type == 1){
+        if ($type == 1) {
             $list = $service->getDailyRankingWithTrend();
-        }else{
-            $list = $service->getPeriodRankingWithTrend(7);
+        } else {
+            $list = $service->getPeriodRankingWithTrend($type);
         }
         return returnSuccess($list);
     }

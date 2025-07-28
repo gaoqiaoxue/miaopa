@@ -512,4 +512,27 @@ class ActivityService
         return $data;
     }
 
+    public function getActivityStatics()
+    {
+        $today = Carbon::today()->startOfDay()->format('Y-m-d');
+        $yesterday = Carbon::yesterday()->startOfDay()->format('Y-m-d');
+        $start_time = Carbon::yesterday()->startOfDay()->format('Y-m-d H:i:s');
+
+        $statics = Db::table('activity_user')
+            ->where('status', '=', ActivityUserStatus::JOINED->value)
+            ->where('create_time', '>', $start_time)
+            ->selectRaw('DATE(create_time) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->get()
+            ->toArray();
+        $statics = array_column($statics, 'count', 'date');
+        $statics_today = $statics[$today] ?? 0;
+        $statics_yesterday = $statics[$yesterday] ?? 0;
+        return [
+            'today' => $statics_today,
+            'compare_yesterday' => abs($statics_today - $statics_yesterday),
+            'compare_status' => $statics_today >= $statics_yesterday ? 1 : 0,
+        ];
+    }
+
 }

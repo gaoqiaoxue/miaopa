@@ -26,7 +26,9 @@ class CabinetService
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
         $list['items'] = array_map(function ($item) {
-            $item->cover = generateFileUrl($item->cover);
+            $item->cabinet_type_name = CabinetType::from($item->cabinet_type)->getMessage();
+            $item->cover_url = generateFileUrl($item->cover);
+            $item->virtual_items = $this->getItemList(['cabinet_id' => $item->id],false,4)['items'] ?? [];
             return $item;
         }, $list['items']);
         return $list;
@@ -41,7 +43,7 @@ class CabinetService
         if (empty($info)) {
             throw new LogicException('次元柜不存在');
         }
-        $info->cabinet_type_name = CabinetType::from($info->cabinet_type)->name;
+        $info->cabinet_type_name = CabinetType::from($info->cabinet_type)->getMessage();
         $info->cover_url = generateFileUrl($info->cover);
         return $info;
     }
@@ -59,6 +61,7 @@ class CabinetService
             'update_time' => date('Y-m-d H:i:s'),
         ];
         $id = Db::table('cabinet')->insertGetId($data);
+        $data['cabinet_type_name'] = CabinetType::from($data['cabinet_type'])->getMessage();
         $data['id'] = $id;
         return $data;
     }
@@ -89,16 +92,21 @@ class CabinetService
             ->delete();
     }
 
-    public function getItemList(array $params)
+    public function getItemList(array $params, bool $is_paginate = true, int $limit = 4)
     {
         $query = Db::table('cabinet_item')
-            ->where('cabinet_id', $params['cabinet_id']);
-        $page = !empty($params['page']) ? $params['page'] : 1;
-        $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['id', 'name', 'alias', 'cover', 'number', 'create_time'])
-            ->orderBy('create_time', 'desc')
-            ->paginate((int)$page_size, page: (int)$page);
-        $list = paginateTransformer($data);
+            ->where('cabinet_id', $params['cabinet_id'])
+            ->select(['id', 'name', 'alias', 'cover', 'number', 'create_time'])
+            ->orderBy('create_time', 'desc');
+        if($is_paginate){
+            $page = !empty($params['page']) ? $params['page'] : 1;
+            $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
+            $data = $query->paginate((int)$page_size, page: (int)$page);
+            $list = paginateTransformer($data);
+        }else{
+            $data = $query->limit($limit)->get()->toArray();
+            $list['items'] = $data;
+        }
         if (!empty($list['items'])) {
             foreach ($list['items'] as $item) {
                 $item->cover_url = generateFileUrl($item->cover);
@@ -120,11 +128,11 @@ class CabinetService
         return $info;
     }
 
-    public function addItem(array $params): int
+    public function addItem(array $params): array
     {
         Db::beginTransaction();
         try {
-            $insert_id = Db::table('cabinet_item')->insertGetId([
+            $item_data = [
                 'cabinet_id' => $params['cabinet_id'],
                 'name' => $params['name'],
                 'alias' => $params['alias'],
@@ -133,7 +141,10 @@ class CabinetService
                 'number' => $params['number'],
                 'create_time' => date('Y-m-d H:i:s'),
                 'update_time' => date('Y-m-d H:i:s'),
-            ]);
+            ];
+            $insert_id = Db::table('cabinet_item')->insertGetId($item_data);
+            $item_data['cover_url'] = generateFileUrl($item_data['cover']);
+            $item_data['id'] = $insert_id;
             Db::table('cabinet')
                 ->where('id', $params['cabinet_id'])
                 ->increment('item_num', $params['number']);
@@ -142,10 +153,10 @@ class CabinetService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
-        return $insert_id;
+        return $item_data;
     }
 
-    public function editItem(array $params): bool
+    public function editItem(array $params): array
     {
         $item = Db::table('cabinet_item')
             ->where('id', $params['item_id'])
@@ -174,7 +185,9 @@ class CabinetService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
-        return true;
+        $update['cover_url'] = generateFileUrl($update['cover']);
+        $update['id'] = $params['item_id'];
+        return $update;
     }
 
     public function deleteItem(int $item_id): bool

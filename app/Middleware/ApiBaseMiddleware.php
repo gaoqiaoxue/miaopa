@@ -2,9 +2,8 @@
 
 namespace App\Middleware;
 
-use App\Exception\NoAuthException;
 use App\Library\Contract\AuthTokenInterface;
-use App\Service\UserService;
+use App\Service\UserStaticsService;
 use Hyperf\Context\Context;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -16,7 +15,7 @@ class ApiBaseMiddleware implements MiddlewareInterface
     /**
      * @param AuthTokenInterface $authToken
      */
-    public function __construct(protected AuthTokenInterface $authToken)
+    public function __construct(protected AuthTokenInterface $authToken, protected UserStaticsService $userStaticsService)
     {
     }
 
@@ -35,9 +34,11 @@ class ApiBaseMiddleware implements MiddlewareInterface
                 return $request->withAttribute('user_id', $user_data['user_id'])
                     ->withAttribute('user_data', $user_data);
             });
+            !empty($user_data['user_id']) && $this->userStaticsService->recordActive('user', $user_data['user_id']);
+        }else{
+            $core_id = $request->getHeaderLine('core_id');
+            !empty($core_id) && $this->userStaticsService->recordActive('guest', $core_id);
         }
-        // todo 用户统计
-
         return $handler->handle($request);
     }
 }

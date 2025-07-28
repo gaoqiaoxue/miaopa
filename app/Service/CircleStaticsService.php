@@ -7,26 +7,18 @@ use Hyperf\DbConnection\Db;
 
 class CircleStaticsService
 {
-    protected $redis;
-
-    public function __construct()
-    {
-        $this->redis = redisHandler();
-    }
-
     // 每个游客每天记录一次
     public function incrementCoreClick(int $circle_id, int $core_id): bool
     {
+        $redisClient = redisHandler();
         $date = date('Y-m-d');
         $userClickKey = "circle:coreclick:{$date}:{$circle_id}:{$core_id}";
-        $isNewClick = $this->redis->setnx($userClickKey, 1);
+        $isNewClick = $redisClient->setnx($userClickKey, 1);
         if ($isNewClick) {
-            $this->redis->expireat($userClickKey, strtotime('tomorrow midnight'));
+            $redisClient->expireat($userClickKey, strtotime('tomorrow midnight'));
 
             $hashKey = "circle:clicks:{$date}";
-            $this->redis->hIncrBy($hashKey, (string)$circle_id, 1);
-//            $key = "circle:click:{$date}:{$circle_id}";
-//            $this->redis->incr($key);
+            $redisClient->hIncrBy($hashKey, (string)$circle_id, 1);
         }
         return true;
     }
@@ -34,16 +26,15 @@ class CircleStaticsService
     // 每个用户每天记录一次
     public function incrementClick(int $circle_id, int $user_id): bool
     {
+        $redisClient = redisHandler();
         $date = date('Y-m-d');
         $userClickKey = "circle:userclick:{$date}:{$circle_id}:{$user_id}";
-        $isNewClick = $this->redis->setnx($userClickKey, 1);
+        $isNewClick = $redisClient->setnx($userClickKey, 1);
         if ($isNewClick) {
-            $this->redis->expireat($userClickKey, strtotime('tomorrow midnight'));
+            $redisClient->expireat($userClickKey, strtotime('tomorrow midnight'));
 
             $hashKey = "circle:clicks:{$date}";
-            $this->redis->hIncrBy($hashKey, (string)$circle_id, 1);
-//            $key = "circle:click:{$date}:{$circle_id}";
-//            $this->redis->incr($key);
+            $redisClient->hIncrBy($hashKey, (string)$circle_id, 1);
         }
         return true;
     }
@@ -95,30 +86,22 @@ class CircleStaticsService
     private function getRawDailyRanking(string $date, array $circle_ids = [], int $limit = 0): array
     {
         if ($date === date('Y-m-d')) {
+            $redisClient = redisHandler();
             // 今日数据从Redis获取
             $hashKey = "circle:clicks:{$date}";
             // 使用HGETALL获取所有数据（比KEYS+GET高效）
-            $allData = $this->redis->hGetAll($hashKey);
+            $allData = $redisClient->hGetAll($hashKey);
             $result = [];
             foreach ($allData as $circleId => $clickCount) {
-                $result[] = [
-                    'circle_id' => (int)$circleId,
-                    'click_count' => (int)$clickCount
-                ];
-            }
-
-//            $pattern = "circle:click:{$date}:*";
-//            $keys = $this->redis->keys($pattern);
-//            $result = [];
-//
-//            foreach ($keys as $key) {
-//                $circleId = (int)substr($key, strrpos($key, ':') + 1);
-//                $clickCount = (int)$this->redis->get($key);
+                $item = new \stdClass();
+                $item->circle_id = (int)$circleId;
+                $item->click_count = (int)$clickCount;
+                $result[] = $item;
 //                $result[] = [
-//                    'circle_id' => $circleId,
-//                    'click_count' => $clickCount
+//                    'circle_id' => (int)$circleId,
+//                    'click_count' => (int)$clickCount
 //                ];
-//            }
+            }
         } else {
             // 历史数据从数据库获取
             $query = Db::table('circle_view_statics')
@@ -134,7 +117,7 @@ class CircleStaticsService
 
         // 按点击量降序排序
         usort($result, function ($a, $b) {
-            return $b['click_count'] <=> $a['click_count'];
+            return $b->click_count <=> $a->click_count;
         });
 
         return !empty($limit) ? array_slice($result, 0, $limit) : $result;
@@ -153,7 +136,7 @@ class CircleStaticsService
         if (!empty($limit)) {
             $query->limit($limit);
         }
-        return $query->select('circle_id', Db::raw('SUM(click_count) as click_count'))
+        return $query->select(['circle_id', Db::raw('SUM(click_count) as click_count')])
             ->groupBy('circle_id')
             ->orderBy('click_count', 'desc')
             ->get()
@@ -169,13 +152,13 @@ class CircleStaticsService
         // 计算趋势
         $result = [];
         foreach ($currentRanking as $index => $item) {
-            $previousCount = $compareMap[$item['circle_id']] ?? null;
+            $previousCount = $compareMap[$item->circle_id] ?? null;
             $result[] = [
                 'rank' => $index + 1,
-                'circle_id' => $item['circle_id'],
-                'name' => $circles[$item['circle_id']] ?? '未知',
-                'count' => $item['click_count'],
-                'compare_status' => $this->getTrend($item['click_count'], $previousCount)
+                'circle_id' => $item->circle_id,
+                'name' => $circles[$item->circle_id] ?? '未知',
+                'count' => $item->click_count,
+                'compare_status' => $this->getTrend($item->click_count, $previousCount)
             ];
         }
         return $result;
@@ -196,37 +179,13 @@ class CircleStaticsService
         }
     }
 
-    /**
-     * 每日定时任务：将Redis数据持久化到数据库, key->value 存储方式
-     */
-    public function persistDailyStats11(): void
-    {
-        $yesterday = date('Y-m-d', strtotime('-1 day'));
-        $pattern = "circle:clicks:{$yesterday}:*";
-        $keys = $this->redis->keys($pattern);
-        foreach ($keys as $key) {
-            $circleId = (int)substr($key, strrpos($key, ':') + 1);
-            $clickCount = (int)$this->redis->get($key);
-            // 更新或插入数据库记录
-            Db::table('circle_view_statics')->insert(
-                [
-                    'circle_id' => $circleId,
-                    'sta_date' => $yesterday,
-                    'click_count' => $clickCount,
-                    'create_time' => date('Y-m-d H:i:s')
-                ]
-            );
-            // 删除Redis中的键
-            $this->redis->del($key);
-        }
-    }
-
     public function persistDailyStats(): void
     {
+        $redisClient = redisHandler();
         $yesterday = date('Y-m-d', strtotime('-1 day'));
         $hashKey = "circle:clicks:{$yesterday}";
         // 获取Hash中的所有字段和值
-        $allData = $this->redis->hGetAll($hashKey);
+        $allData = $redisClient->hGetAll($hashKey);
         if (empty($allData)) {
             return; // 没有数据需要处理
         }
@@ -243,6 +202,6 @@ class CircleStaticsService
         // 使用批量插入优化性能
         Db::table('circle_view_statics')->insert($batchData);
         // 删除Redis中的Hash键
-        $this->redis->del($hashKey);
+        $redisClient->del($hashKey);
     }
 }

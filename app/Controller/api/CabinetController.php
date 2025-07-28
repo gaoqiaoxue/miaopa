@@ -107,7 +107,7 @@ class CabinetController extends AbstractController
     {
         $params = $request->validated();
         $re = $this->service->addItem($params);
-        return returnSuccess(['id' => $re]);
+        return returnSuccess($re);
     }
 
     #[Scene('edit')]
@@ -115,8 +115,8 @@ class CabinetController extends AbstractController
     public function editItem(CabinetItemRequest $request): array
     {
         $params = $request->validated();
-        $this->service->editItem($params);
-        return returnSuccess();
+        $res = $this->service->editItem($params);
+        return returnSuccess($res);
     }
 
     #[Scene('id')]
