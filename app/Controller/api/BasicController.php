@@ -6,6 +6,7 @@ use App\Constants\AbleStatus;
 use App\Constants\ActiveStatus;
 use App\Constants\ActivityType;
 use App\Constants\AuditStatus;
+use App\Constants\CabinetType;
 use App\Constants\CircleRelationType;
 use App\Constants\CircleType;
 use App\Constants\PostType;
@@ -43,6 +44,7 @@ class BasicController extends AbstractController
             'audit_status' => AuditStatus::getMaps(),
             'report_type' => ReportType::getMaps(),
             'report_reason' => ReportReason::getMaps(),
+            'cabinet_type' => CabinetType::getMaps(),
             'file_url' => \Hyperf\Support\env('FILE_HOST'),
             'stay_time_config' => $service->getValue('stay_time_config')
         ]);

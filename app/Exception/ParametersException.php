@@ -14,7 +14,7 @@ class ParametersException extends BaseException
      * @param string $message
      * @param int $statusCode
      */
-    public function __construct(string $message = 'Bad Request', int $code = 0, int $statusCode = 400)
+    public function __construct(string $message = '参数错误', int $code = 500, int $statusCode = 200)
     {
         parent::__construct($statusCode, $message, $code);
     }

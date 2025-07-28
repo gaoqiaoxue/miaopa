@@ -45,6 +45,7 @@ return [
         'document_root' => BASE_PATH . '/public',
         'enable_static_handler' => true,
         'static_handler_locations' => ['/uploads'],
+        'package_max_length' => 20 * 1024 * 1024, // 文件上传大小
     ],
     'callbacks' => [
         Event::ON_WORKER_START => [Hyperf\Framework\Bootstrap\WorkerStartCallback::class, 'onWorkerStart'],

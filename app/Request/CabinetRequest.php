@@ -28,7 +28,7 @@ class CabinetRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cover' => 'required',
+            'cover' => 'string',
             'name' => 'required',
             'cabinet_type' => 'required|in:1,2,3,99',
             'is_public' => 'required|in:0,1',

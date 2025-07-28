@@ -13,9 +13,9 @@ class ValidationExceptionHandler extends ExceptionHandler
         $this->stopPropagation();
         $body = $throwable->validator->errors()->first();
         return $response->withHeader("Content-Type", "application/json")
-            ->withStatus(400)
+            ->withStatus(200)
             ->withBody(new SwooleStream(json_encode([
-                'code' => 0,
+                'code' => 500,
                 'msg' => $body
             ])));
     }

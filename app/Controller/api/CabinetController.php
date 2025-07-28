@@ -55,7 +55,7 @@ class CabinetController extends AbstractController
         $params = $request->validated();
         $user_id = $this->request->getAttribute('user_id');
         $res = $this->service->add($user_id, $params);
-        return returnSuccess(['id' => $res]);
+        return returnSuccess($res);
     }
 
     #[Scene('edit')]

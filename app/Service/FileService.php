@@ -63,7 +63,7 @@ class FileService
         try {
             $this->filesystem->writeStream($storagePath, $stream);
         } catch (\Throwable $throwable) {
-            var_dump($throwable->getMessage());
+            throw new ParametersException($throwable->getMessage());
         } finally {
             if (is_resource($stream)) {
                 fclose($stream);

@@ -46,18 +46,21 @@ class CabinetService
         return $info;
     }
 
-    public function add(int $user_id, array $params): int
+    public function add(int $user_id, array $params): array
     {
-        return Db::table('cabinet')->insertGetId([
+        $data = [
             'user_id' => $user_id,
             'name' => $params['name'],
-            'cover' => $params['cover'],
+            'cover' => $params['cover'] ?? '',
             'item_num' => 0,
             'cabinet_type' => $params['cabinet_type'],
             'is_public' => $params['is_public'],
             'create_time' => date('Y-m-d H:i:s'),
             'update_time' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+        $id = Db::table('cabinet')->insertGetId($data);
+        $data['id'] = $id;
+        return $data;
     }
 
     public function edit(int $user_id, array $params): bool
@@ -71,7 +74,7 @@ class CabinetService
         }
         return Db::table('cabinet')->where('id', $params['cabinet_id'])->update([
             'name' => $params['name'],
-            'cover' => $params['cover'],
+            'cover' => $params['cover'] ?? '',
             'is_public' => $params['is_public'],
             'cabinet_type' => $params['cabinet_type'],
             'update_time' => date('Y-m-d H:i:s'),
