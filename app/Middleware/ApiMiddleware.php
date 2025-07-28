@@ -27,22 +27,21 @@ class ApiMiddleware implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        // Retrieve Request Header Payload
-        $payload = $this->authToken->getUserData();
-        if (!$payload){
-            throw new NoAuthException();
+        $userData = $request->getAttribute('user_data');
+        if (empty($userData)) {
+            $payload = $this->authToken->getUserData();
+            if (!$payload) {
+                throw new NoAuthException();
+            }
+            $userData = $payload['jwt_claims'];
+//            $user = $this->userService->getAuthUserInfo($userData['user_id']);
+//            if(empty($user)){
+//                throw new NoAuthException();
+//            }
+            $request = $request->withAttribute('user_id', $userData['user_id'])
+                ->withAttribute('user_data', $userData);
+            $request = Context::override(ServerRequestInterface::class, fn() => $request);
         }
-        $user_data = $payload['jwt_claims'];
-        // Context override request though proxy ServerRequestInterface class
-//        $user = $this->userService->getAuthUserInfo($user_data['user_id']);
-//        if(empty($user)){
-//            throw new NoAuthException();
-//        }
-        $request = Context::override(ServerRequestInterface::class, function (ServerRequestInterface $request) use ($user_data) {
-            return $request->withAttribute('user_id', $user_data['user_id'])
-                ->withAttribute('user_data', $user_data);
-        });
-
         return $handler->handle($request);
     }
 }

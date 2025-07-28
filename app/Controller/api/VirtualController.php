@@ -3,7 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Service\VirtualService;
 use Hyperf\Di\Annotation\Inject;
@@ -11,6 +11,7 @@ use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class VirtualController extends AbstractController
 {
     #[Inject]
@@ -24,13 +25,12 @@ class VirtualController extends AbstractController
         return returnSuccess($current);
     }
 
-    public function getList(AuthTokenInterface $authToken): array
+    public function getList(): array
     {
         $params = $this->request->all();
         $params['status'] = 1;
         $params['is_default'] = 0;
-        $payload = $authToken->getUserData('default', false);
-        $params['current_user_id'] = $payload['jwt_claims']['user_id'] ?? 0;
+        $params['current_user_id'] = $this->request->getAttribute('user_id', 0);
         $params['check_exchange'] = true;
         $list = $this->service->getList($params);
         return returnSuccess($list);

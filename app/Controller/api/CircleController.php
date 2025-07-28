@@ -3,7 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\CircleRequest;
 use App\Service\CircleService;
@@ -14,6 +14,7 @@ use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class CircleController extends AbstractController
 {
     #[Inject]
@@ -21,15 +22,13 @@ class CircleController extends AbstractController
 
     /**
      * 全部圈子(按分类分组,带搜索)
-     * @param AuthTokenInterface $authToken
      * @return array
      */
-    public function getListByType(AuthTokenInterface $authToken): array
+    public function getListByType(): array
     {
         $keyword = $this->request->input('keyword', '');
         $keyword = trim((string)$keyword);
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $list = $this->service->getAllByType($user_id, $keyword,true, 10);
         return returnSuccess($list);
     }
@@ -40,11 +39,10 @@ class CircleController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function getList(AuthTokenInterface $authToken): array
+    public function getList(): array
     {
         $params = $this->request->all();
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $params['user_id'] = $user_id;
         $params['status'] = 1;
         if(!empty($params['keyword'])){
@@ -56,13 +54,11 @@ class CircleController extends AbstractController
 
     /**
      * 首页推荐圈子
-     * @param AuthTokenInterface $authToken
      * @return array
      */
-    public function getRecommendLists(AuthTokenInterface $authToken): array
+    public function getRecommendLists(): array
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $list = $this->service->getRecommendList($user_id);
         return returnSuccess($list);
     }
@@ -86,10 +82,9 @@ class CircleController extends AbstractController
      * @return array
      */
     #[Scene('circle_id')]
-    public function detail(CircleRequest $request, AuthTokenInterface $authToken, CircleStaticsService $staticsService): array
+    public function detail(CircleRequest $request, CircleStaticsService $staticsService): array
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $circle_id = $request->input('circle_id', 0);
         $list = $this->service->getInfo($circle_id, ['is_follow', 'relations'], ['user_id' => $user_id]);
         if(empty($user_id)){

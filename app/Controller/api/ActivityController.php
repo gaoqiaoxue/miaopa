@@ -3,7 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\ActivityRequest;
 use App\Service\ActivityService;
@@ -14,6 +14,7 @@ use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class ActivityController extends AbstractController
 {
     #[Inject]
@@ -38,13 +39,11 @@ class ActivityController extends AbstractController
     #[Scene('id')]
     public function detail(
         ActivityRequest       $request,
-        AuthTokenInterface    $authToken,
         UserViewRecordService $viewService
     ): array
     {
         $activity_id = $request->input('activity_id');
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $info = $this->service->getInfo((int)$activity_id, ['is_like'], ['user_id' => $user_id]);
         if (!empty($user_id)) {
             $viewService->addViewRecord('activity', $user_id, $activity_id);

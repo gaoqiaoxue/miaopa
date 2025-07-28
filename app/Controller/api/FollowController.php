@@ -3,7 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\UserFollowRequest;
 use App\Service\UserFollowService;
@@ -12,6 +12,7 @@ use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class FollowController extends AbstractController
 {
 
@@ -49,26 +50,24 @@ class FollowController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function userFollowList(AuthTokenInterface $authToken)
+    public function userFollowList()
     {
         $params = $this->request->all();
         if (empty($params['user_id'])) {
             return returnError('请选择用户');
         }
-        $payload = $authToken->getUserData('default', false);
-        $params['current_user_id'] = $payload['jwt_claims']['user_id'] ?? 0;
+        $params['current_user_id'] = $this->request->getAttribute('user_id', 0);
         $list = $this->service->getFollowList($params);
         return returnSuccess($list);
     }
 
-    public function userFansList(AuthTokenInterface $authToken)
+    public function userFansList()
     {
         $params = $this->request->all();
         if (empty($params['user_id'])) {
             return returnError('请选择用户');
         }
-        $payload = $authToken->getUserData('default', false);
-        $params['current_user_id'] = $payload['jwt_claims']['user_id'] ?? 0;
+        $params['current_user_id'] = $this->request->getAttribute('user_id', 0);
         $list = $this->service->getFansList($params);
         return returnSuccess($list);
     }

@@ -3,10 +3,9 @@
 namespace App\Controller\api;
 
 use App\Constants\AuditStatus;
-use App\Constants\PostType;
 use App\Constants\ReportType;
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\PostsRequest;
 use App\Request\ReportRequest;
@@ -20,18 +19,18 @@ use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class PostsController extends AbstractController
 {
     #[Inject]
     protected PostsService $service;
 
-    public function getList(AuthTokenInterface $authToken): array
+    public function getList(): array
     {
         $params = $this->request->all();
         $params['audit_status'] = AuditStatus::PASSED->value;
         $params['is_reported'] = 0;
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $params['current_user_id'] = $user_id;
         $list = $this->service->getApiList($params,true,0, true);
         return returnSuccess($list);
@@ -47,7 +46,7 @@ class PostsController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function getUserPosts(AuthTokenInterface $authToken): array
+    public function getUserPosts(): array
     {
         $params = $this->request->all();
         if (empty($params['user_id'])) {
@@ -55,8 +54,7 @@ class PostsController extends AbstractController
         }
         $params['audit_status'] = AuditStatus::PASSED->value;
         $params['is_reported'] = 0;
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $params['current_user_id'] = $user_id;
         $list = $this->service->getApiList($params);
         return returnSuccess($list);
@@ -65,14 +63,12 @@ class PostsController extends AbstractController
     #[Scene('id')]
     public function detail(
         PostsRequest          $request,
-        AuthTokenInterface    $authToken,
         UserFollowService     $followService,
         UserViewRecordService $viewService
     ): array
     {
         $post_id = $request->input('post_id');
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $info = $this->service->getInfo($post_id, ['is_like'], $user_id);
         if (!empty($user_id) && $user_id != $info->user_id) {
             $type = $viewService->getPostViewType($info->post_type);

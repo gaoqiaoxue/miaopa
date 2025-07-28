@@ -3,6 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\CabinetItemRequest;
 use App\Request\CabinetRequest;
@@ -13,6 +14,7 @@ use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class CabinetController extends AbstractController
 {
     #[Inject]

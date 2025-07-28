@@ -3,7 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Service\MessageService;
 use Hyperf\Di\Annotation\Inject;
@@ -11,15 +11,15 @@ use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class MessageController extends AbstractController
 {
     #[Inject]
     protected MessageService $service;
 
-    public function index(AuthTokenInterface $authToken)
+    public function index()
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         if (empty($user_id)) {
             return returnSuccess([], '用户未登录');
         }

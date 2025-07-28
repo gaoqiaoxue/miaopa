@@ -17,12 +17,15 @@ use App\Constants\Sex;
 use App\Constants\VirtualType;
 use App\Controller\AbstractController;
 use App\Library\Contract\MapWebInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Service\ConfigService;
 use App\Service\FileService;
 use App\Service\RegionService;
 use Hyperf\HttpServer\Annotation\AutoController;
+use Hyperf\HttpServer\Annotation\Middleware;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class BasicController extends AbstractController
 {
     /**

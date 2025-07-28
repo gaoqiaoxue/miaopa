@@ -4,7 +4,7 @@ namespace App\Controller\api;
 
 use App\Constants\ReportType;
 use App\Controller\AbstractController;
-use App\Library\Contract\AuthTokenInterface;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\CommentRequest;
 use App\Request\ReportRequest;
@@ -17,15 +17,15 @@ use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class CommentController extends AbstractController
 {
     #[Inject]
     protected CommentService $service;
 
-    public function getAnswerList(AuthTokenInterface $authToken)
+    public function getAnswerList()
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $params = $this->request->all();
         if (empty($params['post_id'])) {
             return returnError('参数错误');
@@ -35,10 +35,9 @@ class CommentController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function getAnswerDetail(AuthTokenInterface $authToken, PostsService $postsService): array
+    public function getAnswerDetail(PostsService $postsService): array
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $comment_id = $this->request->input('answer_id', 0);
         $detail = $this->service->getCommentDetail((int)$comment_id, (int)$user_id);
         $detail->post_info = $postsService->getInfo($detail->post_id, ['is_like'], (int)$user_id);
@@ -57,10 +56,9 @@ class CommentController extends AbstractController
         return returnSuccess();
     }
 
-    public function getCommentList(AuthTokenInterface $authToken): array
+    public function getCommentList(): array
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $params = $this->request->all();
         if (empty($params['answer_id']) && empty($params['post_id'])) {
             return returnError('参数错误');
@@ -69,10 +67,9 @@ class CommentController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function getReplyList(AuthTokenInterface $authToken): array
+    public function getReplyList(): array
     {
-        $payload = $authToken->getUserData('default', false);
-        $user_id = $payload['jwt_claims']['user_id'] ?? 0;
+        $user_id = $this->request->getAttribute('user_id', 0);
         $params = $this->request->all();
         if (empty($params['comment_id'])) {
             return returnError('参数错误');

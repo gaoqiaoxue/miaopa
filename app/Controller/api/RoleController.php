@@ -3,6 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\RoleRequest;
 use App\Service\RoleService;
@@ -12,6 +13,7 @@ use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\Validation\Annotation\Scene;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 class RoleController extends AbstractController
 {
     #[Inject]

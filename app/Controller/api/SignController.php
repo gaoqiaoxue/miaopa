@@ -3,6 +3,7 @@
 namespace App\Controller\api;
 
 use App\Controller\AbstractController;
+use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Service\UserSignService;
 use Hyperf\Di\Annotation\Inject;
@@ -10,6 +11,7 @@ use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
 #[AutoController]
+#[Middleware(ApiBaseMiddleware::class)]
 #[Middleware(ApiMiddleware::class)]
 class SignController extends AbstractController
 {
