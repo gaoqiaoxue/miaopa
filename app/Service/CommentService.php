@@ -47,9 +47,19 @@ class CommentService
         if (!empty($params['source'])) {
             $query->where('comment.source', '=', $params['source']);
         }
+        if(isset($params['audit_status'])){
+            $query->where('comment.audit_status', '=', $params['audit_status']);
+        }
+        if(isset($params['is_top'])){
+            $query->where('comment.is_top', '=', $params['is_top']);
+        }
+        if(isset($params['audit_del'])){
+            $query->where('comment.audit_del', '=', $params['audit_del']);
+        }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['comment.id', 'comment.content', 'comment.is_top', 'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
+        $data = $query->select(['comment.id', 'comment.content', 'comment.is_top', 'comment.audit_status', 'comment.audit_result',
+            'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
             ->orderBy('comment.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
@@ -61,7 +71,8 @@ class CommentService
         $comment = Db::table('comment')
             ->leftJoin('user', 'user.id', '=', 'comment.user_id')
             ->where(['comment.id' => $comment_id])
-            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.is_top', 'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
+            ->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images', 'comment.is_top', 'comment.audit_status', 'comment.audit_result',
+                'comment.reply_count', 'comment.create_time', 'comment.user_id', 'user.nickname'])
             ->first();
         if (!$comment) {
             throw new LogicException('评论不存在');
@@ -75,6 +86,13 @@ class CommentService
         return Db::table('comment')->where('id', $comment_id)->update([
             'del_flag' => 1,
             'update_time' => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    public function auditDelete(int $comment_id): int
+    {
+        return Db::table('comment')->where('id', $comment_id)->update([
+            'audit_del' => 1
         ]);
     }
 
@@ -176,7 +194,6 @@ class CommentService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
-        $this->pass($comment_id, 1); // TODO 自动审核通过
         return true;
     }
 
@@ -255,7 +272,6 @@ class CommentService
             Db::rollBack();
             throw new LogicException($ex->getMessage());
         }
-        $this->pass($comment_id, 1); // TODO 自动审核通过
         return true;
     }
 

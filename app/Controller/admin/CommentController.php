@@ -32,6 +32,7 @@ class CommentController extends AbstractController
     {
         $params = $this->request->all();
         $params['source'] = 'user';
+        $params['audit_del'] = 0;
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }
@@ -76,6 +77,14 @@ class CommentController extends AbstractController
         $params =  $request->all();
         $cur_user_id = $this->request->getAttribute('user_id');
         $this->service->reject($params['comment_id'], $cur_user_id, (string) $params['reject_reason'] ??'');
+        return returnSuccess();
+    }
+
+    #[Scene('id')]
+    public function auditDelete(CommentRequest $request)
+    {
+        $comment_id = $request->input('comment_id', 0);
+        $this->service->auditDelete($comment_id);
         return returnSuccess();
     }
 }

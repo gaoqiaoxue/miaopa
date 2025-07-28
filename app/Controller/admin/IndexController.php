@@ -6,6 +6,7 @@ use App\Controller\AbstractController;
 use App\Middleware\AdminMiddleware;
 use App\Service\AuditService;
 use App\Service\CircleStaticsService;
+use App\Service\PostsService;
 use Hyperf\HttpServer\Annotation\AutoController;
 use Hyperf\HttpServer\Annotation\Middleware;
 
@@ -87,39 +88,13 @@ class IndexController extends AbstractController
         return returnSuccess($list);
     }
 
-    public function postTrend()
+    public function postTrend(PostsService $service)
     {
         $type = $this->request->input('type', 1);
         if ($type == 1) {
-            $list = [
-                ['time' => '00:00', 'count' => '15'],
-                ['time' => '02:00', 'count' => '12'],
-                ['time' => '04:00', 'count' => '25'],
-                ['time' => '06:00', 'count' => '13'],
-                ['time' => '08:00', 'count' => '36'],
-                ['time' => '10:00', 'count' => '88'],
-                ['time' => '12:00', 'count' => '107'],
-                ['time' => '14:00', 'count' => '66'],
-                ['time' => '16:00', 'count' => '85'],
-                ['time' => '18:00', 'count' => '120'],
-                ['time' => '20:00', 'count' => '245'],
-                ['time' => '22:00', 'count' => '235'],
-                ['time' => '00:00', 'count' => '66'],
-            ];
-        } elseif ($type == 7) {
-            for ($i = 7; $i >= 1; $i--) {
-                $list[] = [
-                    'time' => date('Y-m-d', strtotime('-' . $i . ' day')),
-                    'count' => '66',
-                ];
-            }
-        } elseif ($type == 15) {
-            for ($i = 15; $i >= 1; $i--) {
-                $list[] = [
-                    'time' => date('Y-m-d', strtotime('-' . $i . ' day')),
-                    'count' => '66',
-                ];
-            }
+            $list = $service->dailyPublishStatics();
+        } elseif ($type == 7 || $type == 15) {
+            $list = $service->daysPublishStatics((int)$type);
         } else {
             return returnError('type错误');
         }

@@ -92,7 +92,12 @@ class CircleController extends AbstractController
         $user_id = $payload['jwt_claims']['user_id'] ?? 0;
         $circle_id = $request->input('circle_id', 0);
         $list = $this->service->getInfo($circle_id, ['is_follow', 'relations'], ['user_id' => $user_id]);
-        $staticsService->incrementClick($circle_id);
+        if(empty($user_id)){
+            $core_id = $this->request->getHeaderLine('coreId');
+            !empty($core_id) && $staticsService->incrementCoreClick($circle_id, $core_id);
+        }else{
+            $staticsService->incrementClick($circle_id, $user_id);
+        }
         return returnSuccess($list);
     }
 

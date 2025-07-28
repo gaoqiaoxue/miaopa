@@ -11,6 +11,7 @@ use App\Constants\PrestigeCate;
 use App\Constants\ReferType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
+use Carbon\Carbon;
 use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
@@ -161,6 +162,9 @@ class PostsService
             $query->leftJoin('user_follow', 'user_follow.follow_id', '=', 'post.user_id')
                 ->where('user_follow.user_id', '=', $params['current_user_id'] ?? 0);
         }
+        if(!empty($params['post_id'])){
+            $query->where('post.id', '=', $params['post_id']);
+        }
         if (!empty($params['title'])) {
             $query->where('post.title', 'like', '%' . $params['title'] . '%');
         }
@@ -193,6 +197,9 @@ class PostsService
         }
         if (isset($params['is_reported'])) {
             $query->where('post.is_reported', '=', 0);
+        }
+        if(isset($params['audit_del'])){
+            $query->where('post.audit_del', '=', $params['audit_del']);
         }
         if (!isset($params['with_del'])) {
             $query->where('post.del_flag', '=', 0);
@@ -260,11 +267,18 @@ class PostsService
         ]);
     }
 
+    public function auditDelete(int $post_id): int
+    {
+        return Db::table('post')->where('id', $post_id)->update([
+            'audit_del' => 1
+        ]);
+    }
+
     public function pass(int $post_id, int $cur_user_id): bool
     {
         $post = Db::table('post')
             ->where('id', '=', $post_id)
-            ->first(['id', 'source', 'audit_status']);
+            ->first(['id', 'user_id', 'post_type', 'source', 'audit_status']);
         if ($post->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('帖子已经审核过了');
         }
@@ -275,6 +289,8 @@ class PostsService
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
             $this->auditService->pass(AuditType::POST->value, $post_id, $cur_user_id);
+            // 帖子发布成功
+            $this->publishSuccess($post->user_id, $post->post_type, $post_id);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -327,8 +343,6 @@ class PostsService
                 // 添加审核记录
                 $this->auditService->addAuditRecord(AuditType::POST->value, $post_id, $user_id);
             }
-            // 帖子发布成功
-            $this->publishSuccess($user_id, $params['post_type'], $post_id);
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -432,4 +446,58 @@ class PostsService
     }
 
 
+    // 当天发帖统计；按小时统计
+    public function dailyPublishStatics(string $date = '')
+    {
+        $date = $date ?: date('Y-m-d');
+        $startTime = Carbon::parse($date)->startOfDay()->format('Y-m-d H:i:s');
+        $endTime = Carbon::parse($date)->endOfDay()->format('Y-m-d H:i:s');
+        $query = Db::table('post')->where('del_flag', 0);
+        $query->whereBetween('create_time', [$startTime, $endTime]);
+        $hourlyData = [];
+        for ($hour = 0; $hour < 24; $hour++) {
+            $timeLabel = str_pad($hour, 2, '0', STR_PAD_LEFT) . ':00';
+            $hourlyData[$timeLabel] = 0;
+        }
+        $results = $query->selectRaw('DATE_FORMAT(create_time, "%H:00") as hour, COUNT(*) as count')
+            ->groupBy('hour')
+            ->get()
+            ->toArray();
+        $results = array_column($results, 'count', 'hour');
+        $list = [];
+        foreach ($hourlyData as $hour => $count) {
+            $list[] = [
+                'time' => $hour,
+                'count' => $results[$hour] ?? 0
+            ];
+        }
+        return $list;
+    }
+
+    // N天发帖统计，按天统计
+    public function daysPublishStatics(int $days)
+    {
+        $endTime = Carbon::yesterday()->endOfDay()->format('Y-m-d H:i:s');
+        $startTime = Carbon::now()->subDays($days)->startOfDay()->format('Y-m-d H:i:s');
+        $query = Db::table('post')->where('del_flag', 0);
+        $query->whereBetween('create_time', [$startTime, $endTime]);
+        $dailyData = [];
+        for ($i = $days; $i >= 1; $i--) {
+            $date = date('Y-m-d', strtotime("-$i days"));
+            $dailyData[$date] = 0;
+        }
+        $results = $query->selectRaw('DATE(create_time) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->get()
+            ->toArray();
+        $results = array_column($results, 'count', 'date');
+        $list = [];
+        foreach ($dailyData as $date => $count) {
+            $list[] = [
+                'time' => $date,
+                'count' => $results[$date] ?? 0
+            ];
+        }
+        return $list;
+    }
 }

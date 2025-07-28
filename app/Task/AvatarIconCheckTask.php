@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Task;
 
-use App\Service\CircleStaticsService;
 use App\Service\VirtualService;
 use Hyperf\Crontab\Annotation\Crontab;
 use Hyperf\Di\Annotation\Inject;

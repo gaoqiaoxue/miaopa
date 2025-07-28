@@ -14,13 +14,38 @@ class CircleStaticsService
         $this->redis = redisHandler();
     }
 
-    public function incrementClick(int $circle_id): void
+    // 每个游客每天记录一次
+    public function incrementCoreClick(int $circle_id, int $core_id): bool
     {
         $date = date('Y-m-d');
-        $hashKey = "circle:clicks:{$date}";
-        $this->redis->hIncrBy($hashKey, (string)$circle_id, 1);
-//        $key = "circle:click:{$date}:{$circle_id}";
-//        $this->redis->incr($key);
+        $userClickKey = "circle:coreclick:{$date}:{$circle_id}:{$core_id}";
+        $isNewClick = $this->redis->setnx($userClickKey, 1);
+        if ($isNewClick) {
+            $this->redis->expireat($userClickKey, strtotime('tomorrow midnight'));
+
+            $hashKey = "circle:clicks:{$date}";
+            $this->redis->hIncrBy($hashKey, (string)$circle_id, 1);
+//            $key = "circle:click:{$date}:{$circle_id}";
+//            $this->redis->incr($key);
+        }
+        return true;
+    }
+
+    // 每个用户每天记录一次
+    public function incrementClick(int $circle_id, int $user_id): bool
+    {
+        $date = date('Y-m-d');
+        $userClickKey = "circle:userclick:{$date}:{$circle_id}:{$user_id}";
+        $isNewClick = $this->redis->setnx($userClickKey, 1);
+        if ($isNewClick) {
+            $this->redis->expireat($userClickKey, strtotime('tomorrow midnight'));
+
+            $hashKey = "circle:clicks:{$date}";
+            $this->redis->hIncrBy($hashKey, (string)$circle_id, 1);
+//            $key = "circle:click:{$date}:{$circle_id}";
+//            $this->redis->incr($key);
+        }
+        return true;
     }
 
     /**

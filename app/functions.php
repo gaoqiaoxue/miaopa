@@ -129,7 +129,7 @@ if (!function_exists('generateFileUrl')) {
             return '';
         } elseif (preg_match('/^http(s)?:\/\//i', $url)) {
             return $url;
-        } elseif (preg_match('/^uploads\//i', $url)) {
+        } elseif (preg_match('/^uploads\//i', $url) || preg_match('/^\/uploads\//i', $url)) {
             return \Hyperf\Support\env('FILE_HOST') . '/' . trim($url, '/');
         } else {
             return $url;

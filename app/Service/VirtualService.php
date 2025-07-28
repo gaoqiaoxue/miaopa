@@ -47,7 +47,6 @@ class VirtualService
                 ->where('valid_time', '>', time())
                 ->pluck('item_id')
                 ->toArray();
-            var_dump($has_ids);
         }
         if (!empty($data['items'])) {
             foreach ($data['items'] as $item) {

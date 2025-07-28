@@ -30,8 +30,9 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $service = make(CircleStaticsService::class);
-        $service->persistDailyStats();
+        $service = make(PostsService::class);
+        $res = $service->daysPublishStatics(7);
+        var_dump($res);
         $this->assertTrue(true, '111');
     }
 }
