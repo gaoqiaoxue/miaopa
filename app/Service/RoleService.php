@@ -5,6 +5,8 @@ namespace App\Service;
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
 use App\Constants\CircleRelationType;
+use App\Constants\MessageCate;
+use App\Constants\ReferType;
 use App\Constants\RoleType;
 use App\Exception\LogicException;
 use Hyperf\DbConnection\Db;
@@ -14,6 +16,9 @@ class RoleService
 {
     #[Inject]
     protected AuditService $auditService;
+
+    #[Inject]
+    protected MessageService $messageService;
 
     public function getList(array $params): array
     {
@@ -178,7 +183,7 @@ class RoleService
     {
         $role = Db::table('role')
             ->where('id', '=', $role_id)
-            ->first(['id', 'source', 'audit_status']);
+            ->first(['id', 'circle_id', 'name','source', 'create_by', 'audit_status']);
         if ($role->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('该角色已经审核过了');
         }
@@ -189,6 +194,16 @@ class RoleService
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
             $this->auditService->pass(AuditType::ROLE->value, $role_id, $cur_user_id);
+            // 用户系统消息，给评论人
+            if($role->source == 'user'){
+                $this->messageService->addSystemMessage(
+                    $role->user_id,
+                    MessageCate::ROLE_PASS->value,
+                    '您发布的角色《' . $role->name . '》审核通过',
+                    $role_id,
+                    ReferType::ROLE->value,
+                );
+            }
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -201,7 +216,7 @@ class RoleService
     {
         $role = Db::table('role')
             ->where('id', '=', $role_id)
-            ->first(['id', 'circle_id', 'audit_status']);
+            ->first(['id', 'circle_id', 'name','source', 'create_by', 'audit_status']);
         if ($role->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('该角色已经审核过了');
         }
@@ -213,6 +228,16 @@ class RoleService
             ]);
             $this->auditService->reject(AuditType::ROLE->value, $role_id, $cur_user_id, $reject_reason);
             $this->updateCircleRoleRelation($role->circle_id, $role_id, false);
+            // 用户系统消息，给评论人
+            if($role->source == 'user'){
+                $this->messageService->addSystemMessage(
+                    $role->user_id,
+                    MessageCate::ROLE_FAIL->value,
+                    '您发布的角色《' . $role->name . '》审核被驳回，驳回原因为：' . $reject_reason,
+                    $role_id,
+                    ReferType::ROLE->value,
+                );
+            }
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();

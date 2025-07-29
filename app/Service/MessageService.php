@@ -88,7 +88,7 @@ class MessageService
     {
         $list = $this->getMessages('like', $user_id, $params, $paginate, $limit);
         foreach ($list['items'] as $item) {
-            $item->avatar = generateFileUrl($item->avatar);
+            $item->user_info = generalAPiUserInfo($item);
             if ($item->refer_type == ReferType::COMMENT->value) {
                 $content = Db::table('comment')
                     ->where('id', $item->refer_id)
@@ -121,9 +121,16 @@ class MessageService
     public function getFansMessage(int $user_id, array $params = [], $paginate = true, $limit = 10): array
     {
        $list = $this->getMessages('fans', $user_id, $params, $paginate, $limit);
+       $user_ids = array_column($list['items'], 'user_id');
+       $follow_ids = Db::table('user_follow')
+           ->whereIn('follow_id', $user_ids)
+           ->where('user_id', $user_id)
+           ->pluck('follow_id')
+           ->toArray();
         foreach ($list['items'] as $item) {
             $item->message = '关注了您';
-            $item->avatar = generateFileUrl($item->avatar);
+            $item->user_info = generalAPiUserInfo($item);
+            $item->is_follow = in_array($item->user_id, $follow_ids) ? 1 : 0;
         }
         return $list;
     }
@@ -140,7 +147,7 @@ class MessageService
             ->toArray();
         $comments = array_column($comments, null, 'id');
         foreach ($list['items'] as $item) {
-            $item->avatar = generateFileUrl($item->avatar);
+            $item->user_info = generalAPiUserInfo($item);
             $content = $comments[$item->refer_id] ?? [];
             $item->content = $content;
             list($content_type, $message) = $this->getContentType('like', $item->refer_type, $content);
@@ -153,10 +160,12 @@ class MessageService
     protected function getMessages(string $group, int $user_id, array $params = [], $paginate = true, $limit = 10)
     {
         $query = Db::table('user_message');
-        $field = ['user_message.id', 'user_message.title', 'user_message.message', 'user_message.refer_id', 'user_message.refer_type', 'user_message.refer_uid as user_id', 'user_message.is_read', 'user_message.create_time'];
+        $field = ['user_message.id', 'user_message.title', 'user_message.message',
+            'user_message.refer_id', 'user_message.refer_type', 'user_message.refer_uid as user_id',
+            'user_message.is_read', 'user_message.create_time'];
         if($group != 'system'){
             $query->leftJoin('user', 'user.id', '=', 'user_message.refer_uid');
-            $field = array_merge($field, ['user.nickname', 'user.avatar']);
+            $field = array_merge($field, ['user.nickname', 'user.avatar', 'user.show_icon', 'user.avatar_icon']);
         }
         $query->where('user_message.user_id', $user_id)
             ->where('user_message.group', $group)
@@ -167,6 +176,9 @@ class MessageService
             $page_size = empty($params['page_size']) ? 15 : $params['page_size'];
             $list = $query->paginate((int)$page_size, page: (int)$page);
             $list = paginateTransformer($list);
+            // 将查询出的数据全部转为已读
+            $ids = array_column($list['items'], 'id');
+            $this->setRead($user_id,['ids' => $ids]);
         } else {
             if (!empty($limit)) $query->limit($limit);
             $items = $query->get()->toArray();
@@ -175,7 +187,7 @@ class MessageService
         return $list;
     }
 
-    protected function getContentType(string $action, int $refer_type, object $content)
+    protected function getContentType(string $action, int $refer_type, object|null $content)
     {
         $content_type = '';
         $message = '';
@@ -183,6 +195,8 @@ class MessageService
             return [$content_type, $message];
         }
         if ($refer_type == ReferType::COMMENT->value) {
+            $content_type = 'comment';
+            $message = $action == 'like' ? '点赞了您的评论' : '回复了您的评论';
             if($content->post_type == PostType::QA->value){
                 if(empty($content->answer_id)){
                     $content_type = 'answer';
@@ -205,10 +219,9 @@ class MessageService
             }
         } else {
             $content_type = 'post';
+            $message = $action == 'like' ? '点赞了您的动态' : '评论了您的动态';
             if($content->post_type == PostType::QA->value){
                 $message = $action == 'like' ? '点赞了您的提问' : '回答了您的提问';
-            }elseif ($content->post_type == PostType::DYNAMIC->value){
-                $message = $action == 'like' ? '点赞了您的动态' : '评论了您的动态';
             }
         }
         return [$content_type, $message];
@@ -240,11 +253,13 @@ class MessageService
                 'total' => $group_count['comment'] ?? 0,
                 'list' => $this->getCommentMessage($user_id, [], false, 1)['items'][0] ?? []
             ],
+            'total_unread' => array_sum($group_count),
         ];
     }
 
     public function setRead(int $user_id, array $params = [])
     {
+        var_dump($params);
         $query = Db::table('user_message')
             ->where('user_id', $user_id)
             ->where('is_read', 0);

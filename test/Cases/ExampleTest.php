@@ -17,6 +17,7 @@ use App\Constants\IsRisky;
 use App\Library\WechatMiniAppLib;
 use App\Service\CircleService;
 use App\Service\CircleStaticsService;
+use App\Service\ImageService;
 use App\Service\PostsService;
 use App\Service\UserStaticsService;
 use App\Service\XiaohongshuService;
@@ -32,8 +33,10 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $service = make(XiaohongshuService::class);
-        $service->saveToUser();
+        $url = 'qc.xhscdn.com/avatar/1000g2jo2r0rluo6ju0005nisq3ig8v3ut8it070';
+        $service = make(ImageService::class);
+        $res = $service->saveImageToOss($url,'xiaohongshu/images');
+        var_dump($res);
         $this->assertTrue(true, '111');
     }
 }

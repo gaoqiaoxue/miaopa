@@ -102,7 +102,7 @@ class ActivityService
                     SIN(RADIANS($userLat)) * SIN(RADIANS(lat))
                 ), 2
             )";
-            $columns[] = Db::raw($distanceFormula. ' AS distance');
+            $columns[] = Db::raw($distanceFormula . ' AS distance');
         }
         $query->select($columns)->orderBy('is_hot', 'desc');
         if (!empty($params['lat']) && !empty($params['lon'])) {
@@ -110,12 +110,12 @@ class ActivityService
         }
         $query->orderBy('weight', 'desc')
             ->orderBy('create_time', 'desc');
-        if($is_paginate){
+        if ($is_paginate) {
             $page = !empty($params['page']) ? $params['page'] : 1;
             $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
             $data = $query->paginate((int)$page_size, page: (int)$page);
             $data = paginateTransformer($data);
-        }else{
+        } else {
             if (!empty($limit)) {
                 $query->limit($limit);
             }
@@ -313,7 +313,7 @@ class ActivityService
                 $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
             }
         }
-        if(in_array('is_sign', $cate)){
+        if (in_array('is_sign', $cate)) {
             $item->is_sign = $this->checkIsSignUp($item->id, $params['user_id'] ?? 0);
         }
         if (in_array('creater', $cate)) {
@@ -436,9 +436,12 @@ class ActivityService
             ->leftJoin('activity', 'activity.id', '=', 'activity_user.activity_id')
             ->where('activity_user.user_id', $user_id)
             ->where('activity_user.status', ActivityUserStatus::JOINED->value);
+        if (!empty($params['activity_id'])) {
+            $query->where('activity_user.activity_id', $params['activity_id']);
+        }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['activity.id as activity_id', 'activity.cover', 'activity.name', 'activity.activity_type',
+        $data = $query->select(['activity_user.id', 'activity.id as activity_id', 'activity.cover', 'activity.name', 'activity.activity_type',
             'activity.active_status', 'activity.fee', 'activity.city', 'activity.address', 'activity.lat', 'activity.lon',
             'activity.start_date', 'activity.end_date', 'activity.start_time', 'activity.end_time', 'activity.tags'])
             ->orderBy('activity_user.create_time', 'desc')
@@ -478,7 +481,7 @@ class ActivityService
             ->where('view_history.content_type', '=', 'activity');
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['activity.id as activity_id', 'activity.cover', 'activity.name', 'activity.activity_type',
+        $data = $query->select(['view_history.id', 'activity.id as activity_id', 'activity.cover', 'activity.name', 'activity.activity_type',
             'activity.active_status', 'activity.fee', 'activity.city', 'activity.address', 'activity.lat', 'activity.lon',
             'activity.start_date', 'activity.end_date', 'activity.start_time', 'activity.end_time', 'activity.tags'])
             ->orderBy('view_history.create_time', 'desc')

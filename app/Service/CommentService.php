@@ -25,9 +25,6 @@ class CommentService
     #[Inject]
     protected MessageService $messageService;
 
-    #[Inject]
-    protected VirtualService $virtualService;
-
     public function getList(array $params): array
     {
         $query = Db::table('comment')
@@ -108,7 +105,7 @@ class CommentService
     {
         $comment = Db::table('comment')
             ->where('id', '=', $comment_id)
-            ->first(['id', 'user_id', 'post_id', 'parent_id', 'answer_id', 'at_user_id', 'source', 'audit_status']);
+            ->first(['id', 'user_id', 'post_id', 'parent_id', 'answer_id', 'at_user_id', 'source', 'audit_status', 'content']);
         if (empty($comment)) {
             throw new LogicException('评论不存在');
         }
@@ -122,6 +119,7 @@ class CommentService
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
             $this->auditService->pass(AuditType::COMMENT->value, $comment_id, $cur_user_id);
+            // 金币、声望奖励
             if (empty($comment->parent_id) && empty($comment->answer_id)) {
                 $post = Db::table('post')->where(['id' => $comment->post_id])->first(['id', 'user_id']);
                 $this->commentSuccess($comment->user_id, $comment_id, $post->id, $post->user_id);
@@ -134,6 +132,14 @@ class CommentService
                 }
                 $this->replySuccess($comment->user_id, $comment_id, $parent_id, $be_comment_uid);
             }
+            // 用户系统消息，给评论人
+            $this->messageService->addSystemMessage(
+                $comment->user_id,
+                MessageCate::COMMENT_PASS->value,
+                '您的评论：' . $comment->content . '，审核通过',
+                $comment_id,
+                ReferType::COMMENT->value,
+            );
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -146,7 +152,7 @@ class CommentService
     {
         $comment = Db::table('comment')
             ->where('id', '=', $comment_id)
-            ->first(['id', 'audit_status']);
+            ->first(['id', 'user_id', 'post_id', 'parent_id', 'answer_id', 'at_user_id', 'source', 'audit_status', 'content']);
         if (empty($comment)) {
             throw new LogicException('帖子不存在');
         }
@@ -160,6 +166,14 @@ class CommentService
                 'audit_result' => $reject_reason,
             ]);
             $this->auditService->reject(AuditType::COMMENT->value, $comment_id, $cur_user_id, $reject_reason);
+            // 用户系统消息，给评论人
+            $this->messageService->addSystemMessage(
+                $comment->user_id,
+                MessageCate::COMMENT_FAIL->value,
+                '您的评论：' . $comment->content . '，审核被驳回，驳回原因为：' . $reject_reason,
+                $comment_id,
+                ReferType::COMMENT->value,
+            );
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -368,13 +382,7 @@ class CommentService
     protected function objectTransformer(object $item, array $cate = [], array $params = [])
     {
         if (property_exists($item, 'user_avatar')) {
-            $item->user_info = [
-                'id' => $item->user_id,
-                'avatar' => getAvatar($item->user_avatar),
-                'nickname' => $item->nickname,
-                'show_icon' => $item->show_icon,
-                'avatar_icon' => $item->show_icon ? (!empty($item->avatar_icon) ? generateFileUrl($item->avatar_icon) : $this->virtualService->getDefaultAvatarIcon()) : '',
-            ];
+            $item->user_info = generalAPiUserInfo($item);
         }
         if (property_exists($item, 'images')) {
             $item->images = empty($item->images) ? [] : explode(',', $item->images);

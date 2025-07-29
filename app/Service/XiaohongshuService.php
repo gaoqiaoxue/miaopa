@@ -218,7 +218,6 @@ class XiaohongshuService
 
 
     // 第一步，圈子转化
-
     public function saveToCircle()
     {
         $circles = Db::table('xhs_notes')

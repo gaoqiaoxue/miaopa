@@ -20,6 +20,30 @@ enum MessageCate: int
     #[Message('审核驳回通知')]
     case AUDIT_FAIL = 2;
 
+    #[Message('举报审核通过')]
+    case REPORT_PASS = 11;
+
+    #[Message('举报审核驳回')]
+    case REPORT_FAIL = 12;
+
+    #[Message('角色审核通过')]
+    case ROLE_PASS = 13;
+
+    #[Message('角色审核驳回')]
+    case ROLE_FAIL = 14;
+
+    #[Message('帖子审核通过')]
+    case POST_PASS = 15;
+
+    #[Message('帖子审核驳回')]
+    case POST_FAIL = 16;
+
+    #[Message('评论审核通过')]
+    case COMMENT_PASS = 17;
+
+    #[Message('评论审核驳回')]
+    case COMMENT_FAIL = 18;
+
     #[Message('系统消息')]
     case SYSTEM = 3;
 

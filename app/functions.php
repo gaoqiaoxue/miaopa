@@ -244,3 +244,26 @@ if(!function_exists('getPublishTime')){
         }
     }
 }
+
+if(!function_exists('generalAPiUserInfo')){
+    function generalAPiUserInfo($item)
+    {
+        if(empty($item->show_icon)){
+            $avatar_icon = '';
+        }else{
+            if(!empty($item->avatar_icon)){
+                $avatar_icon = generateFileUrl($item->avatar_icon);
+            }else{
+                $virtualService = \Hyperf\Support\make(\App\Service\VirtualService::class);
+                $avatar_icon = $virtualService->getDefaultAvatarIcon();
+            }
+        }
+        return [
+            'id' => $item->user_id ?? $item->id,
+            'avatar' => getAvatar($item->user_avatar ?? $item->avatar),
+            'nickname' => $item->nickname,
+            'show_icon' => $item->show_icon ?? 0,
+            'avatar_icon' => $avatar_icon
+        ];
+    }
+}

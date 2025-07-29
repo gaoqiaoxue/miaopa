@@ -27,9 +27,6 @@ class PostsService
     #[Inject]
     protected MessageService $messageService;
 
-    #[Inject]
-    protected VirtualService $virtualService;
-
     public function getList(array $params): array
     {
         $params['has_circle'] = true;
@@ -78,7 +75,7 @@ class PostsService
                 'post.user_id', 'user.avatar as user_avatar', 'user.show_icon', 'user.avatar_icon', 'user.nickname', 'post.audit_status', 'post.create_time'];
         }
         $query = $this->buildQuery($params);
-        if($recommendOrder){
+        if ($recommendOrder) {
             $maxValues = $this->getPostRecommendMax();
             $columns[] = Db::raw('(
                 (mp_post.view_count / ' . ($maxValues->max_views ?: 1) . ' * 2.5) + 
@@ -90,7 +87,7 @@ class PostsService
             $query->select($columns)
                 ->orderBy('recommendation_score', 'desc')
                 ->orderBy('post.id', 'desc');
-        }else{
+        } else {
             $query = $query->select($columns)
                 ->orderBy('post.id', 'desc');
         }
@@ -162,7 +159,7 @@ class PostsService
             $query->leftJoin('user_follow', 'user_follow.follow_id', '=', 'post.user_id')
                 ->where('user_follow.user_id', '=', $params['current_user_id'] ?? 0);
         }
-        if(!empty($params['post_id'])){
+        if (!empty($params['post_id'])) {
             $query->where('post.id', '=', $params['post_id']);
         }
         if (!empty($params['title'])) {
@@ -198,7 +195,7 @@ class PostsService
         if (isset($params['is_reported'])) {
             $query->where('post.is_reported', '=', 0);
         }
-        if(isset($params['audit_del'])){
+        if (isset($params['audit_del'])) {
             $query->where('post.audit_del', '=', $params['audit_del']);
         }
         if (!isset($params['with_del'])) {
@@ -227,13 +224,7 @@ class PostsService
     protected function objectTransformer(object $item, array $cate = [], array $params = [])
     {
         if (property_exists($item, 'user_avatar')) {
-            $item->user_info = [
-                'id' => $item->user_id,
-                'avatar' => getAvatar($item->user_avatar),
-                'nickname' => $item->nickname,
-                'show_icon' => $item->show_icon,
-                'avatar_icon' => $item->show_icon ? (!empty($item->avatar_icon) ? generateFileUrl($item->avatar_icon) : $this->virtualService->getDefaultAvatarIcon()) : '',
-            ];
+            $item->user_info = generalAPiUserInfo($item);
         }
         if (property_exists($item, 'circle_cover')) {
             $item->circle_cover = generateFileUrl($item->circle_cover);
@@ -278,7 +269,7 @@ class PostsService
     {
         $post = Db::table('post')
             ->where('id', '=', $post_id)
-            ->first(['id', 'user_id', 'post_type', 'source', 'audit_status']);
+            ->first(['id', 'user_id', 'post_type', 'title', 'source', 'audit_status']);
         if ($post->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('帖子已经审核过了');
         }
@@ -291,6 +282,14 @@ class PostsService
             $this->auditService->pass(AuditType::POST->value, $post_id, $cur_user_id);
             // 帖子发布成功
             $this->publishSuccess($post->user_id, $post->post_type, $post_id);
+            // 用户系统消息，给发帖人
+            $this->messageService->addSystemMessage(
+                $post->user_id,
+                MessageCate::POST_PASS->value,
+                '你发布的' . ($post->post_type == 2 ? '问答' : '动态') . '：' . $post->title . '，审核通过',
+                $post_id,
+                ReferType::POST->value,
+            );
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -303,7 +302,7 @@ class PostsService
     {
         $post = Db::table('post')
             ->where('id', '=', $post_id)
-            ->first(['id', 'audit_status']);
+            ->first(['id', 'user_id', 'post_type', 'title', 'source', 'audit_status']);
         if ($post->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('该角色已经审核过了');
         }
@@ -314,6 +313,14 @@ class PostsService
                 'audit_result' => $reject_reason,
             ]);
             $this->auditService->reject(AuditType::POST->value, $post_id, $cur_user_id, $reject_reason);
+            // 用户系统消息，给发帖人
+            $this->messageService->addSystemMessage(
+                $post->user_id,
+                MessageCate::POST_FAIL->value,
+                '你发布的' . ($post->post_type == 2 ? '问答' : '动态') . '：' . $post->title . '，审核被驳回，驳回原因为：' . $reject_reason,
+                $post_id,
+                ReferType::POST->value,
+            );
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();

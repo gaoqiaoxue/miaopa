@@ -75,7 +75,7 @@ class UserFollowService
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['user.id', 'user.nickname', 'user.avatar', 'user_follow.create_time'])
+        $data = $query->select(['user.id', 'user.nickname', 'user.avatar', 'user.show_icon', 'user.avatar_icon', 'user_follow.create_time'])
             ->orderBy('user_follow.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
@@ -87,7 +87,7 @@ class UserFollowService
                 ->toArray();
         }
         foreach ($list['items'] as $item) {
-            $item->avatar_url = getAvatar($item->avatar);
+            $item->user_info = generalAPiUserInfo($item);
             $item->is_self = $params['current_user_id'] == $item->id ? 1 : 0;
             if ($params['current_user_id'] == $params['user_id']) {
                 $item->is_follow = 1;
@@ -109,7 +109,7 @@ class UserFollowService
         }
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
-        $data = $query->select(['user.id', 'user.nickname', 'user.avatar', 'user_follow.create_time'])
+        $data = $query->select(['user.id', 'user.nickname', 'user.avatar', 'user.show_icon', 'user.avatar_icon', 'user_follow.create_time'])
             ->orderBy('id', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
@@ -121,7 +121,7 @@ class UserFollowService
                 ->toArray();
         }
         foreach ($list['items'] as $item) {
-            $item->avatar_url = getAvatar($item->avatar);
+            $item->user_info = generalAPiUserInfo($item);
             $item->is_self = $params['current_user_id'] == $item->id ? 1 : 0;
             $item->is_follow = in_array($item->id, $follow_ids) ? 1 : 0;
         }

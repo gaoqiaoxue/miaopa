@@ -23,4 +23,10 @@ enum ReferType: int
     #[Message('活动')]
     case ACTIVITY = 3;
 
+    #[Message('角色')]
+    case ROLE = 4;
+
+    #[Message('举报')]
+    case REPORT = 5;
+
 }

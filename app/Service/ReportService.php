@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Constants\AuditStatus;
 use App\Constants\AuditType;
+use App\Constants\MessageCate;
 use App\Constants\PrestigeCate;
 use App\Constants\ReferType;
 use App\Constants\ReportReason;
@@ -25,6 +26,9 @@ class ReportService
 
     #[Inject]
     protected CreditService $creditService;
+
+    #[Inject]
+    protected MessageService $messageService;
 
     public function getAuditList(array $params = []): array
     {
@@ -113,6 +117,14 @@ class ReportService
                 ]);
             }
             $this->reportSuccess((array)$report);
+            // 用户系统消息，给举报人
+            $this->messageService->addSystemMessage(
+                $report->user_id,
+                MessageCate::REPORT_PASS->value,
+                '您的举报审核通过' . empty($mute_time) ? '' : '，用户被禁言' . $mute_time . '分钟',
+                $report_id,
+                ReferType::REPORT->value,
+            );
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
@@ -125,7 +137,7 @@ class ReportService
     {
         $report = Db::table('report')
             ->where('id', '=', $report_id)
-            ->first(['id', 'report_type', 'content_id', 'audit_status']);
+            ->first(['id', 'user_id', 'report_type', 'content_id', 'content_user_id', 'audit_status']);
         if ($report->audit_status != AuditStatus::PENDING->value) {
             throw new LogicException('该举报信息已经审核过了');
         }
@@ -136,6 +148,14 @@ class ReportService
                 'audit_result' => $reject_reason,
             ]);
             $this->auditService->reject(AuditType::REPORT->value, $report_id, $cur_user_id, $reject_reason);
+            // 用户系统消息，给举报人
+            $this->messageService->addSystemMessage(
+                $report->user_id,
+                MessageCate::REPORT_FAIL->value,
+                '您的举报审核被驳回：' . $reject_reason,
+                $report_id,
+                ReferType::REPORT->value,
+            );
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();
