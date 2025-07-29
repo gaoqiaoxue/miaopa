@@ -5,12 +5,9 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\CircleType;
 use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\HttpServer\Contract\RequestInterface;
-use Hyperf\Logger\LoggerFactory;
-use Psr\Log\LoggerInterface;
 
 class XiaohongshuService
 {
@@ -93,6 +90,7 @@ class XiaohongshuService
         ];
     }
 
+    // 列表搜索，并将详情页地址保存到数据库
     public function searchAndSave(string $keyword, int $page = 1, int $pageSize = 20)
     {
         $result = $this->searchNotes($keyword, $page, $pageSize);
@@ -166,16 +164,18 @@ class XiaohongshuService
     }
 
     // 读取json文件中的数据
-    private function getJsonData($filePath){
+    private function getJsonData($filePath)
+    {
         $jsonData = file_get_contents($filePath);
         return json_decode($jsonData, true);
     }
 
+    // 将json文件保存到数据库
     public function saveJson($filePath)
     {
         $data = $this->getJsonData($filePath);
         foreach ($data as $item) {
-            $item['time'] = date('Y-m-d H:i:s', $item['time']/ 1000);
+            $item['time'] = date('Y-m-d H:i:s', $item['time'] / 1000);
             $data = [
                 'note_id' => $item['note_id'],
                 'auther_user_id' => $item['user_id'],
@@ -201,17 +201,76 @@ class XiaohongshuService
                 'is_detail' => 10
             ];
             $note_id = $item['note_id'];
-            $has = Db::table('xhs_notes')->where('note_id', $note_id)-> first(['id','is_detail']);
-            if (!empty($has)){
-                if($has->is_detail == 1){
+            $has = Db::table('xhs_notes')->where('note_id', $note_id)->first(['id', 'is_detail']);
+            if (!empty($has)) {
+                if ($has->is_detail == 1) {
                     Db::table('xhs_notes')->where(['id' => $has->id])->update(['is_detail' => 11]);
-                }else{
+                } else {
                     Db::table('xhs_notes')->where(['id' => $has->id])->update($data);
                 }
-            }else{
+            } else {
                 Db::table('xhs_notes')->insert($data);
             }
         }
         return true;
+    }
+
+
+
+    // 第一步，圈子转化
+
+    public function saveToCircle()
+    {
+        $circles = Db::table('xhs_notes')
+            ->where('circle_id', '=', 0)
+            ->groupBy('keyword')
+            ->pluck('keyword')
+            ->toArray();
+        foreach ($circles as $circle){
+            $circle_id = Db::table('circle')->where('name', $circle)->value('id');
+            if(empty($circle_id)){
+                $circle_id = Db::table('circle')
+                    ->insertGetId([
+                        'name' => $circle,
+                        'circle_type' => CircleType::CIRCLE->value,
+                        'status' => 1,
+                        'create_by' => 1,
+                        'create_time' => date('Y-m-d H:i:s'),
+                        'update_time' => date('Y-m-d H:i:s')
+                    ]);
+            }
+            Db::table('xhs_notes')
+                ->where('keyword', $circle)
+                ->update(['circle_id' => $circle_id]);
+        }
+        return true;
+    }
+
+    // 第二部，用户转化
+    public function saveToUser(): int
+    {
+        $info = Db::table('xhs_notes')
+            ->where('user_id', '=', 0)
+            ->first();
+        $avatar = $this->saveImageToOss($info->auther_avatar);
+    }
+
+    // 100 已完成 1继续下一个
+    public function saveToPost(): int
+    {
+        $raw_data = Db::table('xhs_notes')
+            ->where('post_id', '=', 0)
+            ->first();
+        if (empty($raw_data)) {
+            return 100;
+        }
+    }
+
+    // 将图片或者视频保存到oss
+    private function saveImageToOss(string $imagePath):string
+    {
+        $info = file_get_contents($imagePath);
+        var_dump($info);
+
     }
 }

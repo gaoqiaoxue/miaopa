@@ -24,7 +24,7 @@ class ActivityController extends AbstractController
     {
         $city_id = $this->request->input('city_id', 0);
         return returnSuccess([
-            'hot' => $this->service->getApiList(['city_id' => $city_id], false,10),
+            'hot' => $this->service->getApiList(['city_id' => $city_id], false, 10),
             'dates' => $this->service->getDates((int)$city_id),
         ]);
     }
@@ -44,7 +44,7 @@ class ActivityController extends AbstractController
     {
         $activity_id = $request->input('activity_id');
         $user_id = $this->request->getAttribute('user_id', 0);
-        $info = $this->service->getInfo((int)$activity_id, ['is_like'], ['user_id' => $user_id]);
+        $info = $this->service->getInfo((int)$activity_id, ['is_like', 'is_sign'], ['user_id' => $user_id]);
         if (!empty($user_id)) {
             $viewService->addViewRecord('activity', $user_id, $activity_id);
         }
@@ -58,7 +58,7 @@ class ActivityController extends AbstractController
         $params = $request->validated();
         $user_id = $this->request->getAttribute('user_id');
         $this->service->like((int)$params['activity_id'], (int)$user_id, (int)$params['status']);
-        return returnSuccess();
+        return returnSuccess([], $params['status'] ? '收藏成功' : '已取消');
     }
 
     #[Middleware(ApiMiddleware::class)]

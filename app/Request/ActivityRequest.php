@@ -33,8 +33,8 @@ class ActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'bg' => 'required',
-            'cover' => 'required',
+            'bg' => 'required|array',
+            'cover' => 'required|string',
             'name' => 'required',
             'activity_type' => 'required|in:1',
             'organizer' => 'required',

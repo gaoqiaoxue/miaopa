@@ -19,6 +19,7 @@ use App\Service\CircleService;
 use App\Service\CircleStaticsService;
 use App\Service\PostsService;
 use App\Service\UserStaticsService;
+use App\Service\XiaohongshuService;
 use Hyperf\DbConnection\Db;
 use Hyperf\Testing\TestCase;
 use function Hyperf\Support\make;
@@ -31,8 +32,8 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $service = make(UserStaticsService::class);
-        $service->persistYesterdayStats();
+        $service = make(XiaohongshuService::class);
+        $service->saveToUser();
         $this->assertTrue(true, '111');
     }
 }

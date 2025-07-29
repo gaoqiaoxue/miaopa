@@ -164,7 +164,7 @@ class ActivityService
         $start = strtotime($data['start_date'] . ' ' . $data['start_time']);
         $end = strtotime($data['end_date'] . ' ' . $data['end_time']);
         $result = [
-            'bg' => $data['bg'],
+            'bg' => is_array($data['bg']) ? implode(',', $data['bg']) : $data['bg'],
             'cover' => $data['cover'],
             'name' => $data['name'],
             'activity_type' => $data['activity_type'],
@@ -292,18 +292,15 @@ class ActivityService
         if (property_exists($item, 'cover')) {
             $item->cover_url = generateFileUrl($item->cover);
         }
+        if (property_exists($item, 'bg')) {
+            $item->bg_url = generateMulFileUrl($item->bg);
+        }
         if (property_exists($item, 'activity_type')) {
             $item->activity_type_color = ActivityType::getColor($item->activity_type);
             $item->activity_type_text = ActivityType::from($item->activity_type)->getMessage();
         }
         if (property_exists($item, 'active_status')) {
             $item->active_status_text = ActiveStatus::from($item->active_status)->getMessage();
-        }
-        if (property_exists($item, 'bg')) {
-            $item->bg_url = generateFileUrl($item->bg);
-        }
-        if (property_exists($item, 'cover')) {
-            $item->cover_url = generateFileUrl($item->cover);
         }
         if (property_exists($item, 'start_time')) {
             $item->start_time = date('H:i', strtotime($item->start_time));
@@ -315,6 +312,9 @@ class ActivityService
             } else {
                 $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
             }
+        }
+        if(in_array('is_sign', $cate)){
+            $item->is_sign = $this->checkIsSignUp($item->id, $params['user_id'] ?? 0);
         }
         if (in_array('creater', $cate)) {
             $item->creater_name = Db::table('sys_user')
@@ -375,6 +375,18 @@ class ActivityService
         }
         $has = Db::table('activity_like')
             ->where(['activity_id' => $activity_id, 'user_id' => $user_id])
+            ->count();
+        return $has > 0 ? 1 : 0;
+    }
+
+    // 检查是否已经报名
+    public function checkIsSignUp(int $activity_id, int $user_id): int
+    {
+        if (empty($user_id) || empty($activity_id)) {
+            return 0;
+        }
+        $has = Db::table('activity_user')
+            ->where(['activity_id' => $activity_id, 'user_id' => $user_id, 'status' => ActivityUserStatus::JOINED->value])
             ->count();
         return $has > 0 ? 1 : 0;
     }
