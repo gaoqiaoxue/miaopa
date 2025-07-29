@@ -5,12 +5,16 @@ namespace App\Service;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
+use Hyperf\Guzzle\ClientFactory;
 use League\Flysystem\Filesystem;
 
 class FileService
 {
     #[Inject]
     protected Filesystem $filesystem;
+
+    #[Inject]
+    protected ClientFactory $clientFactory;
 
     protected $allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg'];
 
@@ -192,4 +196,33 @@ class FileService
         return [];
     }
 
+
+    /**
+     * 下载远程文件并保存到OSS
+     *
+     * @param string $url 文件URL
+     * @param string $savePath OSS保存路径
+     * @return string OSS文件URL
+     * @throws \Exception
+     */
+    public function saveFileToOss(string $url, string $savePath, string $ext = 'jpg'): string
+    {
+        try {
+            // 下载图片
+            $response = $this->clientFactory->create()->get($url);
+            if ($response->getStatusCode() !== 200) {
+                throw new \Exception('Failed to download image');
+            }
+            $imageContent = $response->getBody()->getContents();
+            // 获取文件扩展名
+            $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: $ext;
+            $filename = $savePath . '/' . uniqid() . '.' . $extension;
+            // 保存到OSS
+            $this->filesystem->write($filename, $imageContent);
+            // 获取OSS文件URL
+            return $filename;
+        } catch (\Throwable $e) {
+            throw new \Exception('Failed to save image to OSS: ' . $e->getMessage());
+        }
+    }
 }

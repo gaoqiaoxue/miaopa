@@ -49,7 +49,8 @@ class BasicController extends AbstractController
             'report_reason' => ReportReason::getMaps(),
             'cabinet_type' => CabinetType::getMaps(),
             'file_url' => \Hyperf\Support\env('FILE_HOST'),
-            'stay_time_config' => $service->getValue('stay_time_config')
+            'stay_time_config' => $service->getValue('stay_time_config'),
+            'kefu_mobile' => ''
         ]);
     }
 

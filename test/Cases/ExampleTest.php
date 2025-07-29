@@ -12,16 +12,8 @@ declare(strict_types=1);
 
 namespace HyperfTest\Cases;
 
-use App\Constants\AbleStatus;
-use App\Constants\IsRisky;
-use App\Library\WechatMiniAppLib;
-use App\Service\CircleService;
-use App\Service\CircleStaticsService;
+use App\Service\FileService;
 use App\Service\ImageService;
-use App\Service\PostsService;
-use App\Service\UserStaticsService;
-use App\Service\XiaohongshuService;
-use Hyperf\DbConnection\Db;
 use Hyperf\Testing\TestCase;
 use function Hyperf\Support\make;
 
@@ -33,9 +25,9 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $url = 'qc.xhscdn.com/avatar/1000g2jo2r0rluo6ju0005nisq3ig8v3ut8it070';
-        $service = make(ImageService::class);
-        $res = $service->saveImageToOss($url,'xiaohongshu/images');
+        $url = 'http://sns-video-bd.xhscdn.com/spectrum/1040g35831k1ojd5j2a005nue3ung8q1fbr24kc8';
+        $service = make(FileService::class);
+        $res = $service->saveFileToOss($url,'xiaohongshu/videos','mp4');
         var_dump($res);
         $this->assertTrue(true, '111');
     }

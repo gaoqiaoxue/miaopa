@@ -250,18 +250,23 @@ class CreditService
         ];
     }
 
-    public function getPrestigeLevelName(int $prestige): string
+    public function getPrestigeLevelName(int $prestige): array
     {
-        $level = '';
         $level_setting = $this->prestigeLevelSetting();
+        $level_setting = array_reverse($level_setting);
+        $current = [];
         foreach ($level_setting as $item) {
-            if ($prestige > $item['prestige']) {
-                $level = $item['name'];
+            if (empty($current) && $prestige >= $item['prestige']) {
+                $item['is_current'] = 1;
+                $current = $item;
             } else {
-                break;
+                $item['is_current'] = 0;
             }
         }
-        return $level;
+        return [
+            'current' => $current,
+            'list' => array_reverse($level_setting)
+        ];
     }
 
     public function getPrestigeTask(int $user_id)
@@ -271,7 +276,7 @@ class CreditService
         $redis = redisHandler();
         $user_times = $redis->hGetAll('prestige:' . $date . ':' . $user_id);
         foreach ($setting as $key => $item) {
-            $setting[$key]['done_times'] = $user_times[$key] ?? 0;
+            $setting[$key]['done_times'] = (int)($user_times[$key] ?? 0);
         }
         return $setting;
     }
