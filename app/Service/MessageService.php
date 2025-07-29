@@ -142,19 +142,71 @@ class MessageService
         $comment_ids = array_column($items, 'refer_id');
         $comments = Db::table('comment')
             ->whereIn('id', $comment_ids)
-            ->select(['id', 'post_type', 'post_id', 'answer_id', 'parent_id', 'content', 'images'])
+            ->select(['id', 'user_id', 'post_type', 'post_id', 'answer_id', 'parent_id', 'at_parent_id', 'content', 'images', 'reply_count'])
             ->get()
             ->toArray();
         $comments = array_column($comments, null, 'id');
+        $comment_ids = array_keys($comments);
+        $comment_likes = Db::table('comment_like')
+            ->whereIn('comment_id', $comment_ids)
+            ->where('user_id', $user_id)
+            ->pluck('comment_id')
+            ->toArray();
         foreach ($list['items'] as $item) {
             $item->user_info = generalAPiUserInfo($item);
-            $content = $comments[$item->refer_id] ?? [];
+            $content = $comments[$item->refer_id] ?? null;
+            if(!empty($content)){
+                $content->image_urls = generateMulFileUrl($content->images);
+                $content->is_like = in_array($item->refer_id, $comment_likes) ? 1 : 0;
+            }
             $item->content = $content;
-            list($content_type, $message) = $this->getContentType('like', $item->refer_type, $content);
+            list($content_type, $message) = $this->getContentType('comment', $item->refer_type, $content);
             $item->content_type = $content_type;
             $item->message = $message;
+            list($parent_content_type, $parent_content) = $this->getCommentParent($content);
+            $item->parent_content_type = $parent_content_type;
+            $item->parent = $parent_content;
         }
         return $list;
+    }
+
+    protected function getCommentParent($comment)
+    {
+        $parent_id = empty($comment->at_parent_id) ? $comment->parent_id : $comment->at_parent_id;
+        $comment_id = empty($parent_id) ? $comment->answer_id : $parent_id;
+        if (!empty($comment_id)) {
+            $content_type = 'comment';
+            $content = Db::table('comment')
+                ->where('id', $comment_id)
+                ->where('is_reported', 0)
+                ->where('del_flag', 0)
+                ->select(['id', 'post_type', 'post_id', 'answer_id', 'parent_id', 'content', 'images'])
+                ->first();
+            if($content){
+                $content->images = generateMulFileUrl($content->images);
+                if($content->post_type == PostType::QA->value && empty($content->answer_id)){
+                    $content_type = 'answer';
+                }else{
+                    if(empty($content->parent_id)){
+                        $content_type = 'comment';
+                    }else{
+                        $content_type = 'reply';
+                    }
+                }
+            }
+        } else {
+            $content_type = 'post';
+            $content = Db::table('post')
+                ->where('id', $comment->post_id)
+                ->where('is_reported', 0)
+                ->where('del_flag', 0)
+                ->select(['id', 'post_type', 'title', 'content', 'media_type', 'media'])
+                ->first();
+            if($content){
+                $content->media = generateMulFileUrl($content->media);
+            }
+        }
+        return [$content_type,$content];
     }
 
     protected function getMessages(string $group, int $user_id, array $params = [], $paginate = true, $limit = 10)
@@ -195,26 +247,16 @@ class MessageService
             return [$content_type, $message];
         }
         if ($refer_type == ReferType::COMMENT->value) {
-            $content_type = 'comment';
-            $message = $action == 'like' ? '点赞了您的评论' : '回复了您的评论';
-            if($content->post_type == PostType::QA->value){
-                if(empty($content->answer_id)){
-                    $content_type = 'answer';
-                    $message = $action == 'like' ? '点赞了您的回答' : '评论了您的回答';
-                }elseif(empty($content->parent_id)){
-                    $content_type = 'comment';
-                    $message = $action == 'like' ? '点赞了您的评论' : '回复了您的评论';
-                }else{
+            if($content->post_type == PostType::QA->value && empty($content->answer_id)){
+                $content_type = 'answer';
+                $message = $action == 'like' ? '点赞了您的回答' : '评论了您的回答';
+            }else{
+                if(!empty($content->parent_id)){
                     $content_type = 'reply';
                     $message = $action == 'like' ? '点赞了您的回复' : '回复了您的评论';
-                }
-            }elseif($content->post_type == PostType::DYNAMIC->value){
-                if(empty($content->parent_id)){
+                }else{
                     $content_type = 'comment';
                     $message = $action == 'like' ? '点赞了您的评论' : '回复了您的评论';
-                }else{
-                    $content_type = 'reply';
-                    $message = $action == 'like' ? '点赞了您的回复' : '回复了您的评论';
                 }
             }
         } else {

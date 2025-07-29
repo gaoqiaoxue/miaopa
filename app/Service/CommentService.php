@@ -379,7 +379,7 @@ class CommentService
         return $comment;
     }
 
-    protected function objectTransformer(object $item, array $cate = [], array $params = [])
+    public function objectTransformer(object $item, array $cate = [], array $params = [])
     {
         if (property_exists($item, 'user_avatar')) {
             $item->user_info = generalAPiUserInfo($item);
@@ -401,6 +401,7 @@ class CommentService
             }
             $item->reply = $this->getReplyList(['comment_id' => $item->id, 'limit' => 1], $params['user_id'] ?? 0);
         }
+        return $item;
     }
 
     public function like(int $comment_id, int $user_id, int $status): bool
