@@ -18,12 +18,10 @@ use Hyperf\Di\Annotation\Inject;
 class ActivityService
 {
     #[Inject]
-    protected UserViewRecordService $viewService;
-
-    #[Inject]
     protected CreditService $creditService;
 
-    // 检查活动状态
+
+    #[Cacheable(prefix: 'check_activity_status', ttl: 60)]
     public function checkStatus()
     {
         $current = time();
@@ -41,6 +39,7 @@ class ActivityService
     // 后台获取活动列表
     public function getList(array $params)
     {
+        $this->checkStatus();
         $query = Db::table('activity');
         if (!empty($params['name'])) {
             $query->where('name', 'like', '%' . $params['name'] . '%');
@@ -78,13 +77,14 @@ class ActivityService
     {
         $query = Db::table('activity')
             ->where('status', AbleStatus::ENABLE->value)
-            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value]);
+            ->where('end_time', '>=', time());
         if (!empty($params['city_id'])) {
             $query->where('city_id', $params['city_id']);
         }
         if (!empty($params['keyword'])) {
             $query->where('name', 'like', '%' . $params['keyword'] . '%');
         }
+        $columns = ['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time'];
         if (!empty($params['lat']) && !empty($params['lon'])) {
             $userLat = (float)$params['lat'];
             $userLon = (float)$params['lon'];
@@ -96,10 +96,12 @@ class ActivityService
                     SIN(RADIANS($userLat)) * SIN(RADIANS(lat))
                 ), 2
             )";
-            $query->selectRaw('id,cover,name,activity_type,active_status,fee,city,address,lat,lon,start_date,end_date,start_time,end_time,tags,create_time,' . $distanceFormula . ' AS distance');
+            $columns[] = Db::raw($distanceFormula. ' AS distance');
+//            $query->selectRaw('id,cover,name,activity_type,active_status,fee,city,address,lat,lon,start_date,end_date,start_time,end_time,tags,create_time,' . $distanceFormula . ' AS distance');
         } else {
-            $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time']);
+//            $query->select(['id', 'cover', 'name', 'activity_type', 'active_status', 'fee', 'city', 'address', 'lat', 'lon', 'start_date', 'end_date', 'start_time', 'end_time', 'tags', 'create_time']);
         }
+        $query->select($columns);
         if (!empty($limit)) {
             $query->limit($limit);
         }
@@ -119,7 +121,7 @@ class ActivityService
     {
         $query = Db::table('activity')
             ->where('status', AbleStatus::ENABLE->value)
-            ->whereIn('active_status', [ActiveStatus::NOT_START->value, ActiveStatus::ONGOING->value]);
+            ->where('end_time', '>=', time());
         if (!empty($params['keyword'])) {
             $query->where('name', 'like', '%' . $params['keyword'] . '%');
         }
@@ -428,7 +430,7 @@ class ActivityService
         if (empty($activity) || $activity->status == 0) {
             throw new LogicException('活动不存在');
         }
-        if ($activity->active_status == ActiveStatus::ENDED->value) {
+        if ($activity->end_time < time()) {
             throw new LogicException('活动已结束');
         }
         Db::table('activity_user')->insert([
