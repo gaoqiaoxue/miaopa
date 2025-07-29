@@ -28,7 +28,9 @@ class CabinetService
         $list['items'] = array_map(function ($item) {
             $item->cabinet_type_name = CabinetType::from($item->cabinet_type)->getMessage();
             $item->cover_url = generateFileUrl($item->cover);
-            $item->virtual_items = $this->getItemList(['cabinet_id' => $item->id],false,4)['items'] ?? [];
+            $virtual_items = $this->getItemList(['cabinet_id' => $item->id, 'page_size' => 4]);
+            $item->virtual_items = $virtual_items['items'];
+            $item->item_count = $virtual_items['total'];
             return $item;
         }, $list['items']);
         return $list;

@@ -51,9 +51,9 @@ class IndexController extends AbstractController
                 'keyword' => $keyword,
                 'current_user_id' => $user_id
             ], false, 3),
-            'activity' => $activityService->getApiSelect([
+            'activity' => $activityService->getApiList([
                 'keyword' => $keyword
-            ], 1),
+            ], false,1),
             'qa' => $postsService->getApiList([
                 'keyword' => $keyword,
                 'post_type' => PostType::QA->value,

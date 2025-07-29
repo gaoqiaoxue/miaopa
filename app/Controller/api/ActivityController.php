@@ -24,7 +24,7 @@ class ActivityController extends AbstractController
     {
         $city_id = $this->request->input('city_id', 0);
         return returnSuccess([
-            'hot' => $this->service->getApiSelect(['city_id' => $city_id], 10),
+            'hot' => $this->service->getApiList(['city_id' => $city_id], false,10),
             'dates' => $this->service->getDates((int)$city_id),
         ]);
     }
