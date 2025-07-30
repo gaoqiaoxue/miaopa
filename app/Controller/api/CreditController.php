@@ -61,7 +61,8 @@ class CreditController extends AbstractController
             'user' => $user,
             'prestige' => $prestige,
             'level' => $level,
-            'setting' => $setting
+            'setting' => $setting,
+            'rule' => $this->service->getPrestigeRule(),
         ]);
     }
 

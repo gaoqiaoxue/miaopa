@@ -117,7 +117,7 @@ class UserService
     #[Cacheable(prefix: 'user:info:', ttl: 60)]
     public function getAuthUserInfo(int $id)
     {
-        $columns  = ['id', 'username', 'nickname', 'avatar', 'mobile'];
+        $columns = ['id', 'username', 'nickname', 'avatar', 'mobile'];
         $user = Db::table('user')->where(['id' => $id])->select($columns)->first();
         return $user;
     }
@@ -133,11 +133,11 @@ class UserService
         if (property_exists($item, 'show_icon')) {
             $item->avatar_icon = $item->show_icon ? (!empty($item->avatar_icon) ? generateFileUrl($item->avatar_icon) : $this->virtualService->getDefaultAvatarIcon()) : '';
         }
-        if(in_array('medal', $cate)){
-            if($item->show_medal){
+        if (in_array('medal', $cate)) {
+            if ($item->show_medal) {
                 $virtual = $this->virtualService->getCurrent($item->id);
                 $item->medal = $virtual['medal'] ?? [];
-            }else{
+            } else {
                 $item->medal = [];
             }
         }
@@ -156,9 +156,17 @@ class UserService
         }
     }
 
-    #[Cacheable(prefix: 'user_visit', ttl: 3600)]
     public function addHomeViewRecord(int $visitor_id, int $user_id): bool
     {
+        $has = Db::table('user_visit')
+            ->where(['visitor_id' => $visitor_id, 'user_id' => $user_id])
+            ->first();
+        if($has){
+            Db::table('user_visit')->where(['id' => $has->id])->update([
+                'create_time' => date('Y-m-d H:i:s')
+            ]);
+            return true;
+        }
         Db::table('user_visit')->insert([
             'visitor_id' => $visitor_id,
             'user_id' => $user_id,
@@ -174,7 +182,7 @@ class UserService
         $list = Db::table('user_visit')
             ->leftJoin('user', 'user.id', '=', 'user_visit.visitor_id')
             ->where(['user_visit.user_id' => $user_id])
-            ->select(['user.id', 'user.nickname', 'user.avatar'])
+            ->select(['user.id', 'user.nickname', 'user.avatar','user.show_icon', 'user.avatar_icon', 'user_visit.create_time'])
             ->orderBy('user_visit.create_time', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($list);
@@ -204,32 +212,32 @@ class UserService
             }
             $arr['signature'] = $params['signature'];
         }
-        if(isset($params['sex']) && in_array($params['sex'], Sex::getKeys())){
+        if (isset($params['sex']) && in_array($params['sex'], Sex::getKeys())) {
             $arr['sex'] = $params['sex'];
         }
-        if(!empty($params['region_id']) && $params['region_id'] != $user->region_id){
+        if (!empty($params['region_id']) && $params['region_id'] != $user->region_id) {
             $region = Db::table('sys_region')->where('id', $params['region_id'])->value('name');
-            if(empty($region)){
+            if (empty($region)) {
                 return ['code' => 0, 'msg' => '地区不存在'];
             }
             $arr['region'] = $region;
             $arr['region_id'] = $params['region_id'];
         }
-        if(!empty($params['region']) && $params['region'] != $user->region){
+        if (!empty($params['region']) && $params['region'] != $user->region) {
             $arr['region'] = $params['region'];
             $arr['region_id'] = 0;
         }
-        if(!empty($params['school']) && $params['school'] != $user->school){
+        if (!empty($params['school']) && $params['school'] != $user->school) {
             $arr['school'] = $params['school'];
         }
         if (!empty($params['avatar']) && $params['avatar'] != $user->avatar) {
             if (!empty($wx_core)) {
                 $check = $this->mediaAuditService->addMediaAudit($user_id, $wx_core->openid, $params['avatar'], 'avatar', $user_id);
-                if($check == IsRisky::SAFE->value){
+                if ($check == IsRisky::SAFE->value) {
                     $arr['avatar'] = $params['avatar'];
-                }elseif ($check == IsRisky::RISKY->value){
+                } elseif ($check == IsRisky::RISKY->value) {
                     return ['code' => 0, 'msg' => "头像未通过审核，请更换照片"];
-                }else{
+                } else {
                     $msg = '图片审核中';
                 }
             } else {
@@ -239,21 +247,21 @@ class UserService
         if (!empty($params['bg']) && $params['bg'] != $user->bg) {
             if (!empty($wx_core)) {
                 $check = $this->mediaAuditService->addMediaAudit($user_id, $wx_core->openid, $params['bg'], 'bg', $user_id);
-                if($check == IsRisky::SAFE->value){
+                if ($check == IsRisky::SAFE->value) {
                     $arr['bg'] = $params['bg'];
-                }elseif ($check == IsRisky::RISKY->value){
+                } elseif ($check == IsRisky::RISKY->value) {
                     return ['code' => 0, 'msg' => "背景图未通过审核，请更换照片"];
-                }else{
+                } else {
                     $msg = '图片审核中';
                 }
             } else {
                 $arr['bg'] = $params['bg'];
             }
         }
-        if(empty($arr)){
-            if(empty($msg)){
+        if (empty($arr)) {
+            if (empty($msg)) {
                 return ['code' => 0, 'msg' => '没有需要修改的项'];
-            }else{
+            } else {
                 return ['code' => 1, 'msg' => $msg];
             }
         }

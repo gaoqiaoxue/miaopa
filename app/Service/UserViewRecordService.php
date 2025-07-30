@@ -17,12 +17,23 @@ class UserViewRecordService
             if ($type == 'dynamic' || $type == 'qa') {
                 Db::table('post')->where('id', $content_id)->increment('view_count');
             }
-            Db::table('view_history')->insert([
+            $has = Db::table('view_history')->where([
                 'user_id' => $user_id,
                 'content_type' => $type,
                 'content_id' => $content_id,
-                'create_time' => date('Y-m-d H:i:s'),
-            ]);
+            ])->first(['id']);
+            if($has){
+                Db::table('view_history')->where('id', $has['id'])->update([
+                    'create_time' => date('Y-m-d H:i:s'),
+                ]);
+            }else{
+                Db::table('view_history')->insert([
+                    'user_id' => $user_id,
+                    'content_type' => $type,
+                    'content_id' => $content_id,
+                    'create_time' => date('Y-m-d H:i:s'),
+                ]);
+            }
             Db::commit();
         } catch (\Throwable $ex) {
             Db::rollBack();

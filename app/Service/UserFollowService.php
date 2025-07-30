@@ -80,9 +80,9 @@ class UserFollowService
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
         $follow_ids = [];
-        if (!empty($page['current_user_id']) && $params['current_user_id'] != $params['user_id']) {
+        if (!empty($params['current_user_id']) && $params['current_user_id'] != $params['user_id']) {
             $follow_ids = Db::table('user_follow')
-                ->where('user_id', $page['current_user_id'])
+                ->where('user_id', $params['current_user_id'])
                 ->pluck('follow_id')
                 ->toArray();
         }
@@ -114,9 +114,9 @@ class UserFollowService
             ->paginate((int)$page_size, page: (int)$page);
         $list = paginateTransformer($data);
         $follow_ids = [];
-        if (!empty($page['current_user_id'])) {
+        if (!empty($params['current_user_id'])) {
             $follow_ids = Db::table('user_follow')
-                ->where('user_id', $page['current_user_id'])
+                ->where('user_id', $params['current_user_id'])
                 ->pluck('follow_id')
                 ->toArray();
         }

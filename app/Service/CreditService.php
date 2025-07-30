@@ -235,6 +235,17 @@ class CreditService
         ];
     }
 
+    public function getPrestigeRule()
+    {
+        return '您可通过高质量的互动和参与氛围维护提升声望值；
+产出违规的主帖、回复及其他违规行为被处理将会扣除声望
+回帖被删除扣除10声望
+主帖被删除扣除20声望
+账号被禁言将根据封禁时长扣除对应声望值：
+-25声望、-50声望、-100声望
+对扣除处理抱有疑问，可使用意见反馈进行申诉。';
+    }
+
     // 声望等级设置
     public function prestigeLevelSetting()
     {

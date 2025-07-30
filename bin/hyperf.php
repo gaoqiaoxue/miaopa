@@ -8,7 +8,7 @@ ini_set('memory_limit', '1G');
 error_reporting(E_ALL);
 date_default_timezone_set('Asia/Shanghai');
 
-! defined('BASE_PATH') && define('BASE_PATH', '/www/wwwroot/mp.gaoqiaoxue.com');
+! defined('BASE_PATH') && define('BASE_PATH', '/www/wwwroot/miaopaci');
 
 require BASE_PATH . '/vendor/autoload.php';
 
