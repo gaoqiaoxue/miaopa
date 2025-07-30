@@ -34,7 +34,7 @@ class CircleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'bg' => 'required',
+            'bg' => 'string',
             'cover' => 'required',
             'name' => 'required',
             'circle_type' => 'required|in:1,2,3',

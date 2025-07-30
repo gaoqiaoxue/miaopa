@@ -39,7 +39,7 @@ class CircleController extends AbstractController
     }
 
     #[Scene('add')]
-    public function add(CircleRequest $request): array
+    public function create(CircleRequest $request): array
     {
         $data = $request->validated();
         $data['create_by'] = $this->request->getAttribute("user_id");
