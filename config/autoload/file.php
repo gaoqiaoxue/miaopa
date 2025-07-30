@@ -25,7 +25,7 @@ return [
         'local' => [
             'driver' => LocalAdapterFactory::class,
 //            'root' => __DIR__ . '/../../runtime',
-            'root' => __DIR__ . '/../../public',
+            'root' =>  '/www/wwwroot/miaopaci/public',
             'directory_visibility' => 'public'
         ],
         'ftp' => [

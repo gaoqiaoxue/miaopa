@@ -34,7 +34,7 @@ return [
     'settings' => [
         Constant::OPTION_ENABLE_COROUTINE => true,
         Constant::OPTION_WORKER_NUM => swoole_cpu_num(),
-        Constant::OPTION_PID_FILE => BASE_PATH . '/runtime/hyperf.pid',
+        Constant::OPTION_PID_FILE => '/www/wwwroot/miaopaci/runtime/hyperf.pid',
         Constant::OPTION_OPEN_TCP_NODELAY => true,
         Constant::OPTION_MAX_COROUTINE => 100000,
         Constant::OPTION_OPEN_HTTP2_PROTOCOL => true,
@@ -42,7 +42,7 @@ return [
         Constant::OPTION_SOCKET_BUFFER_SIZE => 2 * 1024 * 1024,
         Constant::OPTION_BUFFER_OUTPUT_SIZE => 2 * 1024 * 1024,
 //        "reload_asset" => true,
-        'document_root' => BASE_PATH . '/public',
+        'document_root' => '/www/wwwroot/miaopaci/public',
         'enable_static_handler' => true,
         'static_handler_locations' => ['/uploads'],
         'package_max_length' => 20 * 1024 * 1024, // 文件上传大小

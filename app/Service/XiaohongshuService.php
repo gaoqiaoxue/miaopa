@@ -5,12 +5,17 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\AuditStatus;
 use App\Constants\CircleType;
 use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
+use Hyperf\Di\Annotation\Inject;
 
 class XiaohongshuService
 {
+    #[Inject]
+    protected FileService $fileService;
+
     /**
      * 搜索笔记
      * @Cacheable(prefix="xhs_search", ttl=3600)
@@ -216,7 +221,6 @@ class XiaohongshuService
     }
 
 
-
     // 第一步，圈子转化
     public function saveToCircle()
     {
@@ -225,9 +229,9 @@ class XiaohongshuService
             ->groupBy('keyword')
             ->pluck('keyword')
             ->toArray();
-        foreach ($circles as $circle){
+        foreach ($circles as $circle) {
             $circle_id = Db::table('circle')->where('name', $circle)->value('id');
-            if(empty($circle_id)){
+            if (empty($circle_id)) {
                 $circle_id = Db::table('circle')
                     ->insertGetId([
                         'name' => $circle,
@@ -245,31 +249,117 @@ class XiaohongshuService
         return true;
     }
 
-    // 第二部，用户转化
+    // 第二步，用户转化
     public function saveToUser(): int
     {
         $info = Db::table('xhs_notes')
             ->where('user_id', '=', 0)
             ->first();
-        $avatar = $this->saveImageToOss($info->auther_avatar);
+        if (empty($info)) {
+            return 0;
+        }
+//        $avatar = $this->fileService->saveFileToOss($info->auther_avatar, 'xhs/avatar', 'jpg');
+        $user_id = Db::table('user')->insertGetId([
+            'name' => '',
+            'username' => $info->auther_user_id,
+            'nickname' => $info->auther_nick_name,
+            'mobile' => '',
+            'avatar' => $info->auther_avatar,
+            'create_time' => date('Y-m-d H:i:s'),
+            'update_time' => date('Y-m-d H:i:s'),
+        ]);
+        Db::table('xhs_notes')
+            ->where('auther_user_id', $info->auther_user_id)
+            ->update(['user_id' => $user_id]);
+        return $user_id;
     }
 
-    // 100 已完成 1继续下一个
-    public function saveToPost(): int
+    // 获取笔记的图片比上传到OSS
+    public function saveNormalImages()
     {
-        $raw_data = Db::table('xhs_notes')
+        $info = Db::table('xhs_notes')
+            ->where('note_card_type', '=','normal')
+            ->where('get_media', '=', 0)
+            ->first();
+        if (empty($info)) {
+            return 0;
+        }
+        $result = $this->runWorkflow($info->note_url);
+        $data = json_decode($result['data'], true);
+        $images = $data['output'];
+        $oss_images = [];
+        foreach ($images as $image){
+            $oss_images[] = $this->fileService->saveFileToOss($image, 'xhs/images', 'jpg');
+        }
+        Db::table('xhs_notes')
+            ->where('id', '=', $info->id)
+            ->update([
+                'get_media' => 1,
+                'note_image_list' => implode(',', $oss_images),
+            ]);
+        return $info->id;
+    }
+
+    // 第三步，圈子转化
+    public function saveToNormalPost(): int
+    {
+        $info = Db::table('xhs_notes')
+            ->where('note_card_type', '=','normal')
+            ->where('circle_id','>',0)
+            ->where('user_id', '>',0)
+            ->where('get_media', '=', 1)
             ->where('post_id', '=', 0)
             ->first();
-        if (empty($raw_data)) {
-            return 100;
+        if (empty($info)) {
+            return 0;
         }
+        $post_id = Db::table('post')->insertGetId([
+            'source' => 'admin',
+            'title' => $info->note_display_title,
+            'post_type' => 1,
+            'circle_id' => $info->circle_id,
+            'user_id' => $info->user_id,
+            'content' => $info->note_desc,
+            'media_type' => 1,
+            'media' => $info->note_image_list,
+            'audit_status' => AuditStatus::PASSED->value,
+            'create_time' => $info->note_create_time,
+            'update_time' => $info->note_create_time,
+        ]);
+        Db::table('xhs_notes')->where('id', $info->id)->update(['post_id' => $post_id]);
+        return $post_id;
     }
 
-    // 将图片或者视频保存到oss
-    private function saveImageToOss(string $imagePath):string
+    // 图片失效。利用coze重新获取并且保存到OSS
+    public function runWorkflow($note_url)
     {
-        $info = file_get_contents($imagePath);
-        var_dump($info);
+        // 获取 Guzzle 客户端
+        $clientFactory = \Hyperf\Context\ApplicationContext::getContainer()
+            ->get(\Hyperf\Guzzle\ClientFactory::class);
+        $client = $clientFactory->create();
 
+        // 请求参数
+        $url = 'https://api.coze.cn/v1/workflow/run';
+        $data = [
+            'workflow_id' => '7532777090169700402',
+            'parameters' => [
+                'input' => $note_url
+            ]
+        ];
+
+        // 发起请求
+        $response = $client->post($url, [
+            'headers' => [
+                'Authorization' => 'Bearer pat_rsFNkpgmydnZLFVsvc8bM5LZ0oV9sFDf3SS7siHqnwpDx3LMVl3dmpYSxb83KFer',
+                'Content-Type' => 'application/json',
+            ],
+            'json' => $data,
+        ]);
+
+        // 获取响应内容
+        $responseData = $response->getBody()->getContents();
+
+
+        return json_decode($responseData, true);
     }
 }

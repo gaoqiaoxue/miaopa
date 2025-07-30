@@ -23,7 +23,7 @@ class UserViewRecordService
                 'content_id' => $content_id,
             ])->first(['id']);
             if($has){
-                Db::table('view_history')->where('id', $has['id'])->update([
+                Db::table('view_history')->where('id', $has->id)->update([
                     'create_time' => date('Y-m-d H:i:s'),
                 ]);
             }else{

@@ -15,7 +15,7 @@ return [
             [
                 'class' => Monolog\Handler\RotatingFileHandler::class,
                 'constructor' => [
-                    'filename' => BASE_PATH . '/runtime/logs/hyperf.log',
+                    'filename' =>  '/www/wwwroot/miaopaci/runtime/logs/hyperf.log',
                     'level' => Monolog\Logger::INFO,
                 ],
                 'formatter' => [
@@ -30,7 +30,7 @@ return [
             [
                 'class' => Monolog\Handler\RotatingFileHandler::class,
                 'constructor' => [
-                    'filename' => BASE_PATH . '/runtime/logs/hyperf-error.log',
+                    'filename' =>  '/www/wwwroot/miaopaci/runtime/logs/hyperf-error.log',
                     'level' => Monolog\Logger::ERROR,
                 ],
                 'formatter' => [
@@ -48,7 +48,7 @@ return [
         'handler' => [
             'class' => Monolog\Handler\RotatingFileHandler::class,
             'constructor' => [
-                'filename' =>BASE_PATH . '/runtime/logs/wxmini.log',
+                'filename' => '/www/wwwroot/miaopaci/runtime/logs/wxmini.log',
                 'level' => \Monolog\Logger::DEBUG,
             ],
         ],
@@ -65,7 +65,7 @@ return [
         'handler' => [
             'class' => Monolog\Handler\RotatingFileHandler::class,
             'constructor' => [
-                'filename' =>BASE_PATH . '/runtime/logs/task.log',
+                'filename' => '/www/wwwroot/miaopaci/runtime/logs/task.log',
                 'level' => \Monolog\Logger::DEBUG,
             ],
         ],
