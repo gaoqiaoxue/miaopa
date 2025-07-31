@@ -114,7 +114,7 @@ class UserService
         return $user;
     }
 
-    #[Cacheable(prefix: 'user:info:', ttl: 60)]
+
     public function getAuthUserInfo(int $id)
     {
         $columns = ['id', 'username', 'nickname', 'avatar', 'mobile'];

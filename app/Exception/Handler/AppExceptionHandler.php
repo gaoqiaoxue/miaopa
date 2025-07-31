@@ -41,9 +41,8 @@ class AppExceptionHandler extends ExceptionHandler
                 'errors' => $throwable->validator->errors()->all(),
                 'input' => $throwable->validator->getData(),
             ]);
-        }else{
-            $this->logger->error(sprintf('%s[%s] in %s', $throwable->getMessage(), $throwable->getLine(), $throwable->getFile()));
         }
+        $this->logger->error(sprintf('%s[%s] in %s', $throwable->getMessage(), $throwable->getLine(), $throwable->getFile()));
         $this->logger->error($throwable->getTraceAsString());
         return $response->withHeader('Server', 'Hyperf')->withStatus(500)->withBody(new SwooleStream(
             json_encode([

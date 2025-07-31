@@ -185,6 +185,10 @@ class CommentService
     // 评论
     public function comment(int $user_id, int $post_id, string $content, array $images = [])
     {
+        $user = Db::table('user')->where('id', $user_id)->first(['id', 'mute_time']);
+        if(empty($user) || $user->mute_time > time()){
+            throw new LogicException('您已被禁言');
+        }
         $post = Db::table('post')->where(['id' => $post_id])->first(['id', 'user_id', 'post_type']);
         if (empty($post)) {
             throw new LogicException('帖子不存在');
@@ -227,6 +231,10 @@ class CommentService
     // 回复
     public function reply(int $user_id, int $parent_id, string $content, array $images = [])
     {
+        $user = Db::table('user')->where('id', $user_id)->first(['id', 'mute_time']);
+        if(empty($user) || $user->mute_time > time()){
+            throw new LogicException('您已被禁言');
+        }
         $comment = Db::table('comment')
             ->where(['id' => $parent_id])
             ->first(['id', 'user_id', 'post_id', 'post_type', 'parent_id', 'answer_id']);

@@ -34,14 +34,14 @@ class ApiMiddleware implements MiddlewareInterface
                 throw new NoAuthException();
             }
             $userData = $payload['jwt_claims'];
-//            $user = $this->userService->getAuthUserInfo($userData['user_id']);
-//            if(empty($user)){
-//                throw new NoAuthException();
-//            }
-            $request = $request->withAttribute('user_id', $userData['user_id'])
-                ->withAttribute('user_data', $userData);
-            $request = Context::override(ServerRequestInterface::class, fn() => $request);
         }
+        $user = $this->userService->getAuthUserInfo($userData['user_id']);
+        if(empty($user)){
+            throw new NoAuthException('用户不存在', 0, 402);
+        }
+        $request = $request->withAttribute('user_id', $userData['user_id'])
+            ->withAttribute('user_data', $userData);
+        $request = Context::override(ServerRequestInterface::class, fn() => $request);
         return $handler->handle($request);
     }
 }

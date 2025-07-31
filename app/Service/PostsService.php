@@ -331,6 +331,10 @@ class PostsService
 
     public function publish(int $user_id, array $params, $source = 'user'): int
     {
+        $user = Db::table('user')->where('id', $user_id)->first(['id', 'mute_time']);
+        if(empty($user) || $user->mute_time > time()){
+            throw new LogicException('您已被禁言');
+        }
         Db::beginTransaction();
         try {
             $post_id = Db::table('post')->insertGetId([

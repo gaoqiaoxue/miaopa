@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Constants\AbleStatus;
+use App\Constants\AuditStatus;
 use App\Constants\CircleRelationType;
 use App\Constants\CircleType;
 use App\Constants\PostType;
@@ -397,6 +398,7 @@ LIMIT :limit;';
         if(in_array('post_count', $cate)){
             $post_counts = Db::table('post')
                 ->where('circle_id', $item->id)
+                ->where('audit_status', '=', AuditStatus::PASSED->value)
                 ->groupBy('post_type')
                 ->select(['post_type', Db::raw('count(*) as count')])
                 ->get()
