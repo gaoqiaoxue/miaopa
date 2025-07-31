@@ -4,8 +4,58 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0de000fceb44afe5e11686668da22ec6",
+    "content-hash": "8fbd53544af3514a3dddb9a4c2ed52fd",
     "packages": [
+        {
+            "name": "alibabacloud/oss-v2",
+            "version": "0.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/aliyun/alibabacloud-oss-php-sdk-v2.git",
+                "reference": "4978d87dd6f6652e658e56d3febeefe8666217c1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/aliyun/alibabacloud-oss-php-sdk-v2/zipball/4978d87dd6f6652e658e56d3febeefe8666217c1",
+                "reference": "4978d87dd6f6652e658e56d3febeefe8666217c1",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-simplexml": "*",
+                "guzzlehttp/guzzle": "^6.5.8 || ^7.4.5",
+                "guzzlehttp/promises": "^1.4.0 || ^2.0",
+                "guzzlehttp/psr7": "^2.7",
+                "php": "^7.4 || ^8.0",
+                "psr/http-message": "^1.0 || ^2.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "AlibabaCloud\\Oss\\V2\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Alibaba Cloud OSS SDK",
+                    "email": "sdk-team@alibabacloud.com"
+                }
+            ],
+            "description": "Aliyun OSS SDK for PHP v2",
+            "homepage": "https://github.com/aliyun/alibabacloud-oss-php-sdk-v2",
+            "support": {
+                "issues": "https://github.com/aliyun/alibabacloud-oss-php-sdk-v2/issues",
+                "source": "https://github.com/aliyun/alibabacloud-oss-php-sdk-v2/tree/0.3.1"
+            },
+            "time": "2025-06-13T06:31:52+00:00"
+        },
         {
             "name": "aliyuncs/oss-sdk-php",
             "version": "v2.7.2",

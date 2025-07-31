@@ -163,6 +163,17 @@ class ActivityService
     {
         $start = strtotime($data['start_date'] . ' ' . $data['start_time']);
         $end = strtotime($data['end_date'] . ' ' . $data['end_time']);
+        $city = Db::table('sys_region')
+            ->where('id', $data['city_id'])
+            ->first(['id','name','pid','code','level','path','full_name']);
+        if(empty($city) || $city->level == 1){
+            throw new LogicException('城市不存在');
+        }
+        if($city->level == 3){
+            $city = Db::table('sys_region')
+                ->where('id', $city->pid)
+                ->first(['id','name','pid','code','level','path','full_name']);
+        }
         $result = [
             'bg' => is_array($data['bg']) ? implode(',', $data['bg']) : $data['bg'],
             'cover' => $data['cover'],
@@ -170,8 +181,8 @@ class ActivityService
             'activity_type' => $data['activity_type'],
             'organizer' => $data['organizer'],
             'is_hot' => $data['is_hot'],
-            'city' => RegionService::getRegionNameById($data['city_id']),
-            'city_id' => $data['city_id'],
+            'city' => $city->name,
+            'city_id' => $city->id,
             'address' => $data['address'],
             'lat' => $data['lat'] ?? 0,
             'lon' => $data['lon'] ?? 0,
