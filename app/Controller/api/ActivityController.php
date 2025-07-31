@@ -20,6 +20,7 @@ class ActivityController extends AbstractController
     #[Inject]
     protected ActivityService $service;
 
+    // 热门活动和有活动的日期
     public function index(): array
     {
         $city_id = $this->request->input('city_id', 0);

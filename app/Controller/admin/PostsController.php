@@ -23,7 +23,7 @@ class PostsController extends AbstractController
     {
         $params = $this->request->all();
         $params['audit_status'] = AuditStatus::PASSED->value;
-        $params['with_del'] = true;
+//        $params['with_del'] = true;
         $list = $this->service->getList($params);
         return returnSuccess($list);
     }

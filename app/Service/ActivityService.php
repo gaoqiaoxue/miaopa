@@ -81,9 +81,6 @@ class ActivityService
         if (!empty($params['keyword'])) {
             $query->where('name', 'like', '%' . $params['keyword'] . '%');
         }
-        if (!empty($params['city_id'])) {
-            $query->where('city_id', $params['city_id']);
-        }
         if (!empty($params['date'])) {
             $start = Carbon::parse($params['date'])->startOfDay()->timestamp;
             $end = $start + 86400;
@@ -104,7 +101,22 @@ class ActivityService
             )";
             $columns[] = Db::raw($distanceFormula . ' AS distance');
         }
-        $query->select($columns)->orderBy('is_hot', 'desc');
+        $city_sort = false;
+        if (!empty($params['city_id'])) {
+            $city = Db::table('sys_region')
+                ->where('id', $params['city_id'])
+                ->select('id', 'pid')
+                ->first();
+            if(!empty($city)){
+                $city_sort = true;
+                $columns[] = Db::raw("CASE WHEN city_id = ". $city->id ." THEN 1 WHEN province_id = ". $city->pid ." THEN 2 ELSE 3 END AS priority_level");
+            }
+        }
+        $query->select($columns);
+        if($city_sort){
+            $query->orderBy('priority_level', 'asc');
+        }
+        $query->orderBy('is_hot', 'desc');
         if (!empty($params['lat']) && !empty($params['lon'])) {
             $query->orderBy('distance', 'asc');
         }
@@ -133,7 +145,7 @@ class ActivityService
     {
         $info = Db::table('activity')
             ->where(['id' => $activity_id])
-            ->select(['id', 'bg', 'cover', 'name', 'activity_type', 'organizer', 'is_hot', 'city', 'city_id', 'address', 'lat', 'lon', 'fee',
+            ->select(['id', 'bg', 'cover', 'name', 'activity_type', 'organizer', 'is_hot', 'city', 'city_id', 'province', 'province_id', 'address', 'lat', 'lon', 'fee',
                 'start_date', 'end_date', 'start_time', 'end_time', 'weight', 'status', 'active_status', 'tags', 'details', 'create_by', 'create_time'])
             ->first();
         if (empty($info)) {
@@ -165,14 +177,14 @@ class ActivityService
         $end = strtotime($data['end_date'] . ' ' . $data['end_time']);
         $city = Db::table('sys_region')
             ->where('id', $data['city_id'])
-            ->first(['id','name','pid','code','level','path','full_name']);
-        if(empty($city) || $city->level == 1){
+            ->first(['id', 'name', 'pid', 'code', 'level', 'path', 'full_name']);
+        if (empty($city) || $city->level == 1) {
             throw new LogicException('城市不存在');
         }
-        if($city->level == 3){
+        if ($city->level == 3) {
             $city = Db::table('sys_region')
                 ->where('id', $city->pid)
-                ->first(['id','name','pid','code','level','path','full_name']);
+                ->first(['id', 'name', 'pid', 'code', 'level', 'path', 'full_name']);
         }
         $result = [
             'bg' => is_array($data['bg']) ? implode(',', $data['bg']) : $data['bg'],
@@ -183,6 +195,8 @@ class ActivityService
             'is_hot' => $data['is_hot'],
             'city' => $city->name,
             'city_id' => $city->id,
+            'province_id' => $city->pid,
+            'province' => explode('/', $city->full_name)[0] ?? '',
             'address' => $data['address'],
             'lat' => $data['lat'] ?? 0,
             'lon' => $data['lon'] ?? 0,
@@ -266,7 +280,7 @@ class ActivityService
         FROM mp_activity
         WHERE status = 1 AND active_status in (1,2)';
         if (!empty($city_id)) {
-            $sql .= ' AND city_id = :city_id';
+//            $sql .= ' AND city_id = :city_id';
         }
         $sql .= ' UNION ALL
         
@@ -333,14 +347,11 @@ class ActivityService
                 ->value('nick_name');
         }
         if (in_array('city', $cate)) {
-            $city = Db::table('sys_region')
-                ->where('id', '=', $item->city_id)
-                ->first(['id', 'pid', 'name', 'full_name']);
             $item->cityInfo = [
-                'city_id' => $city->id,
-                'city_name' => $city->name,
-                'province_id' => $city->pid,
-                'province_name' => explode('/', $city->full_name)[0] ?? ''
+                'city_id' => $item->city_id,
+                'city_name' => $item->city,
+                'province_id' => $item->province_id ?? 0,
+                'province_name' => $item->province ?? '',
             ];
         }
     }

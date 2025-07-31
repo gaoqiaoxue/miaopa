@@ -29,10 +29,10 @@ class PostsRequest extends FormRequest
         return [
             'post_id' => 'required|integer',
             'post_type' => 'required|in:1,2',
-            'circle_id' => 'required|integer',
+            'circle_id' => 'integer',
             'user_id' => 'required|integer',
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
+            'title' => 'string|max:255',
+            'content' => 'string',
             'media' => 'array',
             'media_type' => 'in:1,2',
             'status' => 'required|in:0,1',

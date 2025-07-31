@@ -57,8 +57,7 @@ class LoginController extends AbstractController
     {
         $new_token = $this->service->refreshToken();
         $new_token['token'] = 'Bearer '.$new_token['token'];
-        throw new parametersException('请使用Bearer '.$new_token['token'].' 登录');
-//        return returnSuccess($new_token);
+        return returnSuccess($new_token);
     }
 
     /**

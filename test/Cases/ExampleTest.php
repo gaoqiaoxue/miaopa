@@ -27,14 +27,15 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $users = Db::table('user')
-            ->where('id','>', 10)
-            ->get(['id', 'avatar'])
+        $users = Db::table('xhs_notes')
+            ->where('user_id', '>', 0)
+            ->pluck('user_id')
             ->toArray();
-        foreach ($users as $user){
-            Db::table('xhs_notes')
-                ->where('user_id', $user->id)
-                ->update(['auther_avatar' => $user->avatar]);
+        foreach ($users as $user_id){
+            $has = Db::table('user_credit')->where(['user_id' => $user_id])->count();
+            if(!$has){
+                Db::table('user_credit')->insert(['user_id' => $user_id]);
+            }
         }
         $this->assertTrue(true, '1111');
     }

@@ -10,6 +10,7 @@ use App\Constants\CircleType;
 use Hyperf\Cache\Annotation\Cacheable;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
+use function Hyperf\Support\value;
 
 class XiaohongshuService
 {
@@ -224,26 +225,38 @@ class XiaohongshuService
     // 第一步，圈子转化
     public function saveToCircle()
     {
-        $circles = Db::table('xhs_notes')
-            ->where('circle_id', '=', 0)
-            ->groupBy('keyword')
-            ->pluck('keyword')
-            ->toArray();
-        foreach ($circles as $circle) {
-            $circle_id = Db::table('circle')->where('name', $circle)->value('id');
-            if (empty($circle_id)) {
-                $circle_id = Db::table('circle')
-                    ->insertGetId([
-                        'name' => $circle,
-                        'circle_type' => CircleType::CIRCLE->value,
-                        'status' => 1,
-                        'create_by' => 1,
-                        'create_time' => date('Y-m-d H:i:s'),
-                        'update_time' => date('Y-m-d H:i:s')
-                    ]);
-            }
+        $circle_map = [
+            // cosplay 圈子 (id:82)
+            'cosplay' => 82,
+            'coser' => 82,
+            '二次元' => 82,
+
+            // 潮玩 圈子 (id:84)
+            '潮玩' => 84,
+            '泡泡玛特' => 84,
+            'pop' => 84,
+            'LABUBU' => 84,
+            'POP(泡泡玛特)' => 84,
+            'POP(泡泡玛特)，LABUBU' => 84,
+
+            // 游戏 圈子 (id:86)
+            '游戏' => 86,
+            '原神' => 86,
+            '崩坏' => 86,
+            '排球少年' => 86,
+            '鬼灭之刃' => 86,
+            '咒术回战' => 86,
+
+            // 谷子 圈子 (id:83 - 谷图)
+            '谷子' => 83,
+            '吧唧' => 83,
+
+            // 手办 圈子 (id:85)
+            '手办' => 85
+        ];
+        foreach ($circle_map as $keyword => $circle_id){
             Db::table('xhs_notes')
-                ->where('keyword', $circle)
+                ->where('keyword', $keyword)
                 ->update(['circle_id' => $circle_id]);
         }
         return true;
@@ -253,6 +266,8 @@ class XiaohongshuService
     public function saveToUser(): int
     {
         $info = Db::table('xhs_notes')
+            ->where('note_card_type', '=','normal')
+            ->where('circle_id', '>', 0)
             ->where('user_id', '=', 0)
             ->first();
         if (empty($info)) {
@@ -268,6 +283,7 @@ class XiaohongshuService
             'create_time' => date('Y-m-d H:i:s'),
             'update_time' => date('Y-m-d H:i:s'),
         ]);
+        Db::table('user_credit')->insert(['user_id' => $user_id]);
         Db::table('xhs_notes')
             ->where('auther_user_id', $info->auther_user_id)
             ->update(['user_id' => $user_id]);

@@ -335,14 +335,17 @@ class PostsService
         if(empty($user) || $user->mute_time > time()){
             throw new LogicException('您已被禁言');
         }
+        if(empty($params['title']) && empty($params['content']) && empty($params['media'])){
+            throw new LogicException('请填写标题或内容');
+        }
         Db::beginTransaction();
         try {
             $post_id = Db::table('post')->insertGetId([
                 'user_id' => $user_id,
-                'circle_id' => $params['circle_id'],
-                'title' => $params['title'],
+                'circle_id' => $params['circle_id'] ?? 0,
+                'title' => $params['title'] ?? '',
                 'content' => $params['content'],
-                'post_type' => $params['post_type'],
+                'post_type' => $params['post_type'] ?? '',
                 'media' => empty($params['media']) ? '' : implode(',', $params['media']),
                 'media_type' => $params['media_type'] ?? 1,
                 'create_time' => date('Y-m-d H:i:s'),

@@ -103,6 +103,7 @@ class CommentController extends AbstractController
     public function like(CommentRequest $request)
     {
         $params = $request->validated();
+        logGet('commentlike')->error(json_encode($params));
         $user_id = $this->request->getAttribute('user_id');
         $this->service->like($params['comment_id'], $user_id, $params['status'] ?? 1);
         return returnSuccess([], $params['status'] ? '点赞成功' : '已取消');

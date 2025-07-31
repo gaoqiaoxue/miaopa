@@ -110,6 +110,7 @@ class PostsController extends AbstractController
     {
         $user_id = $this->request->getAttribute('user_id');
         $params = $request->validated();
+        logGet('postlike')->error(json_encode($params));
         $this->service->like($params['post_id'], $user_id, $params['status']);
         return returnSuccess([], $params['status'] ? '点赞成功' : '已取消');
     }

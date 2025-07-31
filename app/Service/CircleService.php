@@ -239,8 +239,8 @@ WHERE
     c.status = :status
 ORDER BY 
     is_follow DESC, 
-    c.is_hot DESC, 
     c.weight DESC, 
+    c.is_hot DESC, 
     c.id DESC
 LIMIT :limit;';
             $circles = Db::select($sql, ['userId' => 1, 'status' => AbleStatus::ENABLE->value, 'limit' => $total_num]);
