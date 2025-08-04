@@ -15,7 +15,7 @@ class ConfigService
         $info = Db::table('system_config')
             ->where('id', '=', 1)
             ->select(['post_publish_type', 'comment_publish_type', 'report_publish_type', 'daily_sign_coins', 'continuous_sign_config',
-                'post_coins', 'comment_coins', 'activity_coins', 'stay_time_config','user_agreement', 'privacy_policy'])
+                'post_coins', 'comment_coins', 'activity_coins', 'stay_time_config', 'user_agreement', 'privacy_policy', 'about_us', 'guide_image'])
             ->first();
         $info->continuous_sign_config = json_decode($info->continuous_sign_config, true);
         $info->stay_time_config = json_decode($info->stay_time_config, true);
@@ -30,7 +30,7 @@ class ConfigService
         return Db::table('system_config')->where('id', '=', 1)->update($params);
     }
 
-    public function getValue($key):string|array|null
+    public function getValue($key): string|array|null
     {
         $config = $this->getConfig();
         return isset($config->$key) ? $config->$key : null;

@@ -241,6 +241,7 @@ class PostsService
             } else {
                 $item->is_like = $this->checkIsLike($item->id, $params['current_user_id'] ?? 0);
             }
+            $item->is_mine = (!empty($params['current_user_id']) && $item->user_id == $params['current_user_id']) ? 1 : 0;
         }
         if (in_array('publish_time', $cate)) {
             $item->create_time = getPublishTime(strtotime($item->create_time));
@@ -250,8 +251,14 @@ class PostsService
         $item->bg_color = $color[$c_id];
     }
 
-    public function delete(int $post_id): int
+    public function delete(int $post_id, int $check_user_id = 0): int
     {
+        if(!empty($check_user_id)){
+            $user_id = Db::table('post')->where('id', '=', $post_id)->value('user_id');
+            if ($user_id != $check_user_id) {
+                throw new LogicException('只能删除自己的帖子');
+            }
+        }
         return Db::table('post')->where('id', $post_id)->update([
             'del_flag' => 1,
             'update_time' => date('Y-m-d H:i:s')

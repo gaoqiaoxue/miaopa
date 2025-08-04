@@ -40,7 +40,7 @@ class ActivityService
     public function getList(array $params)
     {
         $this->checkStatus();
-        $query = Db::table('activity');
+        $query = Db::table('activity')->where(['del_flag' => 0]);
         if (!empty($params['name'])) {
             $query->where('name', 'like', '%' . $params['name'] . '%');
         }
@@ -76,10 +76,14 @@ class ActivityService
     public function getApiList(array $params, bool $is_paginate = true, int $limit = 10)
     {
         $query = Db::table('activity')
+            ->where(['del_flag' => 0])
             ->where('status', AbleStatus::ENABLE->value)
             ->where('end', '>=', time());
         if (!empty($params['keyword'])) {
             $query->where('name', 'like', '%' . $params['keyword'] . '%');
+        }
+        if(isset($params['is_hot'])){
+            $query->where('is_hot', 1);
         }
         if (!empty($params['date'])) {
             $start = Carbon::parse($params['date'])->startOfDay()->timestamp;
@@ -297,9 +301,9 @@ class ActivityService
         ORDER BY activity_date ASC
         LIMIT 30;';
         $params = ['current_date' => date('Y-m-d')];
-        if (!empty($city_id)) {
-            $params['city_id'] = $city_id;
-        }
+//        if (!empty($city_id)) {
+//            $params['city_id'] = $city_id;
+//        }
         $list = Db::select($sql, $params);
         foreach ($list as $item) {
             $time = strtotime($item->activity_date);
@@ -536,6 +540,13 @@ class ActivityService
             'compare_yesterday' => abs($statics_today - $statics_yesterday),
             'compare_status' => $statics_today >= $statics_yesterday ? 1 : 0,
         ];
+    }
+
+    public function delete(int $activity_id)
+    {
+        return Db::table('activity')
+            ->where('id', $activity_id)
+            ->update(['del_flag' => 1, 'update_time' => date('Y-m-d H:i:s')]);
     }
 
 }

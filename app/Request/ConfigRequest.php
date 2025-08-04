@@ -11,7 +11,7 @@ class ConfigRequest extends FormRequest
     protected array $scenes = [
         'publish' => ['post_publish_type', 'comment_publish_type', 'report_publish_type'],
         'coins' => ['daily_sign_coins', 'continuous_sign_config', 'post_coins', 'comment_coins', 'activity_coins', 'stay_time_config'],
-        'set_agreement' => ['user_agreement', 'privacy_policy']
+        'set_agreement' => ['user_agreement', 'privacy_policy', 'about_us']
     ];
 
     /**
@@ -39,6 +39,7 @@ class ConfigRequest extends FormRequest
             'stay_time_config' => 'array',
             'user_agreement' => 'required',
             'privacy_policy' => 'required',
+            'about_us' => 'required'
         ];
     }
 
@@ -63,6 +64,7 @@ class ConfigRequest extends FormRequest
             'stay_time_config.array' => '停留时间配置必须为数组',
             'user_agreement.require' => '用户协议不能为空',
             'privacy_policy.require' => '隐私政策不能为空',
+            'about_us.require' => '关于我们不能为空'
         ];
     }
 

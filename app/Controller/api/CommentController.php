@@ -119,4 +119,14 @@ class CommentController extends AbstractController
         $reportService->report($user_id, ReportType::COMMENT, $data);
         return returnSuccess();
     }
+
+    #[Middleware(ApiMiddleware::class)]
+    #[Scene('id')]
+    public function delete(CommentRequest $request)
+    {
+        $params = $request->validated();
+        $user_id = $this->request->getAttribute('user_id');
+        $this->service->delete($params['comment_id'], $user_id);
+        return returnSuccess([], '已删除');
+    }
 }

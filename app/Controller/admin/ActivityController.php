@@ -59,6 +59,14 @@ class ActivityController extends AbstractController
     }
 
     #[Scene('id')]
+    public function delete(ActivityRequest $request): array
+    {
+        $data = $request->validated();
+        $this->service->delete($data['activity_id']);
+        return returnSuccess();
+    }
+
+    #[Scene('id')]
     public function getUsers(ActivityRequest $request): array
     {
         $params = $request->all();

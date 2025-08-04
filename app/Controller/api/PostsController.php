@@ -136,4 +136,14 @@ class PostsController extends AbstractController
         $reportService->report($user_id, ReportType::POST, $data);
         return returnSuccess();
     }
+
+    #[Middleware(ApiMiddleware::class)]
+    #[Scene('id')]
+    public function delete(PostsRequest $request)
+    {
+        $params = $request->validated();
+        $user_id = $this->request->getAttribute('user_id');
+        $this->service->delete($params['post_id'], $user_id);
+        return returnSuccess([], '已删除');
+    }
 }

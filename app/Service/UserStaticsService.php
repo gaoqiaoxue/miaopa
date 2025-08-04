@@ -142,7 +142,7 @@ class UserStaticsService
             ],
             'register_rate' => [
                 'today' => $register_rate_today,
-                'compare_yesterday' => abs($register_rate_today - $register_rate_yesterday),
+                'compare_yesterday' => abs(round($register_rate_today - $register_rate_yesterday,2)),
                 'compare_status' => $register_rate_today >= $register_rate_yesterday ? 1 : 0,
             ],
         ];

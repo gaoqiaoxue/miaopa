@@ -53,6 +53,7 @@ class CommentService
         if(isset($params['audit_del'])){
             $query->where('comment.audit_del', '=', $params['audit_del']);
         }
+        $query->where('comment.del_flag', '=', 0);
         $page = !empty($params['page']) ? $params['page'] : 1;
         $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
         $data = $query->select(['comment.id', 'comment.content', 'comment.is_top', 'comment.audit_status', 'comment.audit_result',
@@ -78,8 +79,14 @@ class CommentService
         return $comment;
     }
 
-    public function delete(int $comment_id): int
+    public function delete(int $comment_id, int $check_user_id = 0): int
     {
+        if(!empty($check_user_id)){
+            $user_id = Db::table('comment')->where('id', '=', $comment_id)->value('user_id');
+            if ($user_id != $check_user_id) {
+                throw new LogicException('没有权限删除该评论');
+            }
+        }
         return Db::table('comment')->where('id', $comment_id)->update([
             'del_flag' => 1,
             'update_time' => date('Y-m-d H:i:s')
@@ -402,6 +409,7 @@ class CommentService
             } else {
                 $item->is_like = $this->checkIsLike($item->id, $params['user_id'] ?? 0);
             }
+            $item->is_mine = (!empty($params['user_id']) && $item->user_id == $params['user_id']) ? 1 : 0;
         }
         if (in_array('reply', $cate)) {
             if ($item->reply_count == 0) {
