@@ -9,6 +9,7 @@ use App\Constants\MessageCate;
 use App\Constants\PostType;
 use App\Constants\PrestigeCate;
 use App\Constants\ReferType;
+use App\Constants\ReportType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Carbon\Carbon;
@@ -36,7 +37,7 @@ class PostsService
         $data = $query->select(['post.id', 'post.title', 'post.content', 'post.post_type', 'post.comment_count',
             'post.audit_status', 'post.circle_id', 'circle.name as circle_name',
             'post.user_id', 'user.nickname', 'post.audit_status', 'post.create_time', 'post.del_flag'])
-            ->orderBy('post.create_time', 'desc')
+            ->orderBy('post.id', 'desc')
             ->paginate((int)$page_size, page: (int)$page);
         $data = paginateTransformer($data);
         return $data;
@@ -96,22 +97,29 @@ class PostsService
             $page_size = !empty($params['page_size']) ? $params['page_size'] : 15;
             $data = $query->paginate((int)$page_size, page: (int)$page);
             $data = paginateTransformer($data);
-            if (!empty($data['items'])) {
-                foreach ($data['items'] as $key => $item) {
-                    $this->objectTransformer($item, $cate, $params);
-                }
-            }
         } else {
             if ($limit) {
-                $data = $query->limit($limit)->get()->toArray();
+                $items = $query->limit($limit)->get()->toArray();
             } else {
-                $data = $query->get()->toArray();
+                $items = $query->get()->toArray();
             }
-            foreach ($data as $item) {
+            $data = ['items' => $items];
+        }
+        if (!empty($data['items'])) {
+            if(in_array('is_like', $cate) && !empty($params['current_user_id'])){
+                $ids = array_column($data['items'], 'id');
+                $likes = Db::table('post_like')
+                    ->where(['user_id' => $params['current_user_id']])
+                    ->whereIn('post_id', $ids)
+                    ->pluck('post_id')
+                    ->toArray();
+                $params['like_ids'] = $likes;
+            }
+            foreach ($data['items'] as $key => $item) {
                 $this->objectTransformer($item, $cate, $params);
             }
         }
-        return $data;
+        return $is_paginate ? $data : $data['items'];
     }
 
     public function viewList(int $user_id, array $params = [])
@@ -185,6 +193,42 @@ class PostsService
         }
         if (isset($params['audit_status']) && in_array($params['audit_status'], AuditStatus::getKeys())) {
             $query->where('post.audit_status', '=', $params['audit_status']);
+        }
+        if(isset($params['post_publish_type'])){
+            if($params['post_publish_type'] == 1 && !empty($params['current_user_id'])){
+                // 查询其他用户的已通过审核的或者我的非驳回的
+                $user_id = $params['current_user_id'];
+                $query->where(function ($query) use ($user_id){
+                    $query->where('post.audit_status', '=', AuditStatus::PASSED)
+                        ->orWhere(function ($query) use ($user_id){
+                            $query->where('post.audit_status', '=', AuditStatus::PENDING)
+                                ->where('post.user_id', '=', $user_id);
+                        });
+                });
+            }else{
+                $query->where('post.audit_status', '=', AuditStatus::PASSED);
+            }
+        }
+        if(isset($params['report_publish_type'])){
+            if($params['report_publish_type'] == 1 && !empty($params['current_user_id'])){ // 自己举报的可以看，别人举报的都看不了
+                $report_ids = Db::table('report')
+                    ->where('report.user_id', '<>', $params['current_user_id'])
+                    ->where('report.report_type', '=', ReportType::POST)
+                    ->where('report.audit_status', '=', AuditStatus::PENDING)
+                    ->groupBy('report.content_id')
+                    ->pluck('report.content_id')
+                    ->toArray();
+            }else{
+                $report_ids = Db::table('report')
+                    ->where('report.report_type', '=', ReportType::POST)
+                    ->where('report.audit_status', '=', AuditStatus::PENDING)
+                    ->groupBy('report.content_id')
+                    ->pluck('report.content_id')
+                    ->toArray();
+            }
+            if(!empty($report_ids)){
+                $query->whereNotIn('post.id', $report_ids);
+            }
         }
         if (!empty($params['source'])) {
             $query->where('post.source', '=', $params['source']);

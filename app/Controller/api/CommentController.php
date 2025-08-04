@@ -9,6 +9,7 @@ use App\Middleware\ApiMiddleware;
 use App\Request\CommentRequest;
 use App\Request\ReportRequest;
 use App\Service\CommentService;
+use App\Service\ConfigService;
 use App\Service\PostsService;
 use App\Service\ReportService;
 use Hyperf\Di\Annotation\Inject;
@@ -23,7 +24,7 @@ class CommentController extends AbstractController
     #[Inject]
     protected CommentService $service;
 
-    public function getAnswerList()
+    public function getAnswerList(ConfigService $configService)
     {
         $user_id = $this->request->getAttribute('user_id', 0);
         $params = $this->request->all();
@@ -31,6 +32,9 @@ class CommentController extends AbstractController
             return returnError('参数错误');
         }
         $params['answer_id'] = 0;
+        $config = $configService->getConfig();
+        $params['comment_publish_type'] = $config->comment_publish_type;
+        $params['report_publish_type'] = $config->report_publish_type;
         $list = $this->service->getCommentList((array)$params, (int)$user_id, ['is_like']);
         return returnSuccess($list);
     }
@@ -56,24 +60,30 @@ class CommentController extends AbstractController
         return returnSuccess();
     }
 
-    public function getCommentList(): array
+    public function getCommentList(ConfigService $configService): array
     {
         $user_id = $this->request->getAttribute('user_id', 0);
         $params = $this->request->all();
         if (empty($params['answer_id']) && empty($params['post_id'])) {
             return returnError('参数错误');
         }
+        $config = $configService->getConfig();
+        $params['comment_publish_type'] = $config->comment_publish_type;
+        $params['report_publish_type'] = $config->report_publish_type;
         $list = $this->service->getCommentList($params, (int)$user_id, ['reply', 'is_like']);
         return returnSuccess($list);
     }
 
-    public function getReplyList(): array
+    public function getReplyList(ConfigService $configService): array
     {
         $user_id = $this->request->getAttribute('user_id', 0);
         $params = $this->request->all();
         if (empty($params['comment_id'])) {
             return returnError('参数错误');
         }
+        $config = $configService->getConfig();
+        $params['comment_publish_type'] = $config->comment_publish_type;
+        $params['report_publish_type'] = $config->report_publish_type;
         $list = $this->service->getReplyList($params, (int)$user_id);
         return returnSuccess($list);
     }

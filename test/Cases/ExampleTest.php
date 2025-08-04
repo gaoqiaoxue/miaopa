@@ -12,9 +12,14 @@ declare(strict_types=1);
 
 namespace HyperfTest\Cases;
 
+use App\Constants\AuditStatus;
+use App\Service\ConfigService;
 use App\Service\FileService;
 use App\Service\ImageService;
+use App\Service\PostsService;
 use App\Service\XiaohongshuService;
+use App\Service\ZDouYinService;
+use App\Service\ZhihuService;
 use Hyperf\DbConnection\Db;
 use Hyperf\Testing\TestCase;
 use function Hyperf\Support\make;
@@ -27,45 +32,41 @@ class ExampleTest extends TestCase
 {
     public function testExample()
     {
-        $users = Db::table('xhs_notes')
-            ->where('user_id', '>', 0)
-            ->pluck('user_id')
-            ->toArray();
-        foreach ($users as $user_id){
-            $has = Db::table('user_credit')->where(['user_id' => $user_id])->count();
-            if(!$has){
-                Db::table('user_credit')->insert(['user_id' => $user_id]);
-            }
+//        $file = BASE_PATH.'/data/douyin.json';
+        $service = make(ZDouYinService::class);
+        $res = 1;
+        while ($res){
+            $res = $service->transPost();
         }
         $this->assertTrue(true, '1111');
     }
 
-    public function testExampleCircle()
-    {
-        $service = make(XiaohongshuService::class);
-        $res = $service->saveToCircle();
-        var_dump($res);
-        $this->assertTrue(true, 'circle');
-    }
-
-    public function testExampleUser()
-    {
-        $service = make(XiaohongshuService::class);
-        $res = 1;
-        while ($res){
-            $res = $service->saveToUser();
-        }
-        $this->assertTrue(true, '111');
-    }
-
-    public function testExamplePost()
-    {
-        $service = make(XiaohongshuService::class);
-        $res = 1;
-        while ($res){
-            $res = $service->saveToNormalPost();
-        }
-        var_dump($res);
-        $this->assertTrue(true, '111');
-    }
+//    public function testExampleCircle()
+//    {
+//        $service = make(XiaohongshuService::class);
+//        $res = $service->saveToCircle();
+//        var_dump($res);
+//        $this->assertTrue(true, 'circle');
+//    }
+//
+//    public function testExampleUser()
+//    {
+//        $service = make(XiaohongshuService::class);
+//        $res = 1;
+//        while ($res){
+//            $res = $service->saveToUser();
+//        }
+//        $this->assertTrue(true, '111');
+//    }
+//
+//    public function testExamplePost()
+//    {
+//        $service = make(XiaohongshuService::class);
+//        $res = 1;
+//        while ($res){
+//            $res = $service->saveToNormalPost();
+//        }
+//        var_dump($res);
+//        $this->assertTrue(true, '111');
+//    }
 }

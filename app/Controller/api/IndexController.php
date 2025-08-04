@@ -9,6 +9,7 @@ use App\Controller\AbstractController;
 use App\Middleware\ApiBaseMiddleware;
 use App\Service\ActivityService;
 use App\Service\CircleService;
+use App\Service\ConfigService;
 use App\Service\MediaAuditService;
 use App\Service\PostsService;
 use App\Service\UserService;
@@ -32,7 +33,8 @@ class IndexController extends AbstractController
         CircleService      $circleService,
         PostsService       $postsService,
         ActivityService    $activityService,
-        UserService        $userService
+        UserService        $userService,
+        ConfigService      $configService
     )
     {
         $keyword = $this->request->input('keyword');
@@ -40,6 +42,7 @@ class IndexController extends AbstractController
             return returnError('请输入搜索内容');
         }
         $user_id = $this->request->getAttribute('user_id', 0);
+        $config = $configService->getConfig();
         $result = [
             'circle' => $circleService->getSelect([
                 'name' => $keyword,
@@ -58,14 +61,16 @@ class IndexController extends AbstractController
                 'keyword' => $keyword,
                 'post_type' => PostType::QA->value,
                 'is_reported' => 0,
-                'audit_status' => AuditStatus::PASSED->value,
+                'post_publish_type' => $config->post_publish_type,
+                'report_publish_type' => $config->report_publish_type,
                 'current_user_id' => $user_id
             ], false, 3, true),
             'dynamic' => $postsService->getApiList([
                 'keyword' => $keyword,
                 'post_type' => PostType::DYNAMIC->value,
                 'is_reported' => 0,
-                'audit_status' => AuditStatus::PASSED->value,
+                'post_publish_type' => $config->post_publish_type,
+                'report_publish_type' => $config->report_publish_type,
                 'current_user_id' => $user_id
             ], false, 15, true),
         ];

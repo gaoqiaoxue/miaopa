@@ -9,6 +9,7 @@ use App\Constants\MessageCate;
 use App\Constants\PostType;
 use App\Constants\PrestigeCate;
 use App\Constants\ReferType;
+use App\Constants\ReportType;
 use App\Exception\LogicException;
 use App\Exception\ParametersException;
 use Hyperf\DbConnection\Db;
@@ -319,16 +320,8 @@ class CommentService
 
     public function getCommentList(array $params, int $user_id, array $cate = []): array
     {
-        $query = Db::table('comment')
-            ->leftJoin('user', 'user.id', '=', 'comment.user_id')
-            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0, 'comment.audit_status' => AuditStatus::PASSED->value])
-            ->where('comment.parent_id', '=', 0);
-        if (!empty($params['post_id'])) {
-            $query->where('comment.post_id', $params['post_id']);
-        }
-        if (isset($params['answer_id'])) {
-            $query->where('comment.answer_id', $params['answer_id']);
-        }
+        $params['parent_id'] = 0;
+        $query = $this->buildCommentQuery($params, $user_id);
         $page = empty($params['page']) ? 1 : intval($params['page']);
         $page_size = empty($params['page_size']) ? 15 : intval($params['page_size']);
         $data = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
@@ -348,10 +341,8 @@ class CommentService
 
     public function getReplyList(array $params, int $user_id = 0, array $cate = ['is_like', 'at_user']): array
     {
-        $query = Db::table('comment')
-            ->leftJoin('user', 'user.id', '=', 'comment.user_id')
-            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0, 'comment.audit_status' => AuditStatus::PASSED->value])
-            ->where('comment.parent_id', $params['comment_id']);
+        $params['parent_id'] = $params['comment_id'];
+        $query = $this->buildCommentQuery($params, $user_id);
         $start = empty($params['next_num']) ? 0 : intval($params['next_num']);
         $limit = empty($params['limit']) ? 10 : intval($params['limit']);
         $list = $query->select(['comment.id', 'comment.post_id', 'comment.content', 'comment.images',
@@ -376,6 +367,58 @@ class CommentService
             $this->objectTransformer($item, $cate, ['user_id' => $user_id, 'like_ids' => $like_ids]);
         }
         return ['next_num' => count($list) == $limit ? $start + $limit : 0, 'items' => $list];
+    }
+
+    protected function buildCommentQuery(array $params, int $user_id = 0, )
+    {
+        $query = Db::table('comment')
+            ->leftJoin('user', 'user.id', '=', 'comment.user_id')
+            ->where(['comment.del_flag' => 0, 'comment.is_reported' => 0]);
+        if(isset($params['parent_id'])){
+            $query->where('comment.parent_id', $params['parent_id']);
+        }
+        if (!empty($params['post_id'])) {
+            $query->where('comment.post_id', $params['post_id']);
+        }
+        if (isset($params['answer_id'])) {
+            $query->where('comment.answer_id', $params['answer_id']);
+        }
+        if(isset($params['comment_publish_type'])){
+            if($params['comment_publish_type'] == 1 && !empty($user_id)){
+                // 查询其他用户的已通过审核的或者我的非驳回的
+                $query->where(function ($query) use ($user_id){
+                    $query->where('comment.audit_status', '=', AuditStatus::PASSED)
+                        ->orWhere(function ($query) use ($user_id){
+                            $query->where('comment.audit_status', '=', AuditStatus::PENDING)
+                                ->where('comment.user_id', '=', $user_id);
+                        });
+                });
+            }else{
+                $query->where('comment.audit_status', '=', AuditStatus::PASSED);
+            }
+        }
+        if(isset($params['report_publish_type'])){
+            if($params['report_publish_type'] == 1 && !empty($user_id)){ // 自己举报的可以看，别人举报的都看不了
+                $report_ids = Db::table('report')
+                    ->where('report.user_id', '<>', $user_id)
+                    ->where('report.report_type', '=', ReportType::COMMENT)
+                    ->where('report.audit_status', '=', AuditStatus::PENDING)
+                    ->groupBy('report.content_id')
+                    ->pluck('report.content_id')
+                    ->toArray();
+            }else{
+                $report_ids = Db::table('report')
+                    ->where('report.report_type', '=', ReportType::COMMENT)
+                    ->where('report.audit_status', '=', AuditStatus::PENDING)
+                    ->groupBy('report.content_id')
+                    ->pluck('report.content_id')
+                    ->toArray();
+            }
+            if(!empty($report_ids)){
+                $query->whereNotIn('comment.id', $report_ids);
+            }
+        }
+        return $query;
     }
 
     public function getCommentDetail(int $comment_id, int $user_id): object
@@ -415,7 +458,10 @@ class CommentService
             if ($item->reply_count == 0) {
                 $item->reply = ['next_num' => 0, 'data' => []];
             }
-            $item->reply = $this->getReplyList(['comment_id' => $item->id, 'limit' => 1], $params['user_id'] ?? 0);
+            $replay_params = ['comment_id' => $item->id, 'limit' => 1];
+            isset($params['comment_publish_type']) && $replay_params['comment_publish_type'] = $params['comment_publish_type'];
+            isset($params['report_publish_type']) && $replay_params['report_publish_type'] = $params['report_publish_type'];
+            $item->reply = $this->getReplyList($replay_params, $params['user_id'] ?? 0);
         }
         return $item;
     }

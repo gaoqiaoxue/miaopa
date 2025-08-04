@@ -9,6 +9,7 @@ use App\Middleware\ApiBaseMiddleware;
 use App\Middleware\ApiMiddleware;
 use App\Request\PostsRequest;
 use App\Request\ReportRequest;
+use App\Service\ConfigService;
 use App\Service\PostsService;
 use App\Service\ReportService;
 use App\Service\UserFollowService;
@@ -25,13 +26,15 @@ class PostsController extends AbstractController
     #[Inject]
     protected PostsService $service;
 
-    public function getList(): array
+    public function getList(ConfigService $configService): array
     {
         $params = $this->request->all();
-        $params['audit_status'] = AuditStatus::PASSED->value;
-        $params['is_reported'] = 0;
+        $config = $configService->getConfig();
         $user_id = $this->request->getAttribute('user_id', 0);
         $params['current_user_id'] = $user_id;
+        $params['post_publish_type'] = $config->post_publish_type;
+        $params['report_publish_type'] = $config->report_publish_type;
+        $params['is_reported'] = 0;
         $list = $this->service->getApiList($params,true,0, true);
         return returnSuccess($list);
     }

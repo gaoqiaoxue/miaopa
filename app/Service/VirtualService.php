@@ -64,7 +64,7 @@ class VirtualService
     {
         $virtual = Db::table('virtual_item')
             ->where(['id' => $virtual_id, 'del_flag' => 0])
-            ->select(['id', 'name', 'item_type', 'exchange_amount', 'valid_days', 'quantity', 'image', 'avatar', 'create_time'])
+            ->select(['id', 'name', 'item_type', 'exchange_amount', 'valid_days', 'quantity', 'image', 'avatar', 'is_default', 'create_time'])
             ->first();
         if (!$virtual) {
             throw new LogicException('虚拟商品不存在');
