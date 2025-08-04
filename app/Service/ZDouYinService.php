@@ -82,7 +82,7 @@ class ZDouYinService
                 ->update(['get_media' => 2]);
             return 1;
         }
-        $to_user_id = round(1057,1437);
+        $to_user_id = rand(1057,1437);
         $post_id = Db::table('post')->insertGetId([
             'source' => 'admin',
             'title' => $info->title,
@@ -114,4 +114,5 @@ class ZDouYinService
             return false;
         }
     }
+
 }

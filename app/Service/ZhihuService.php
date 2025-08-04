@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use App\Constants\AuditStatus;
+use App\Constants\PostType;
 use Hyperf\DbConnection\Db;
 
 class ZhihuService
@@ -51,11 +53,79 @@ class ZhihuService
             // 手办 圈子 (id:85)
             '手办' => 85
         ];
-        foreach ($circle_map as $keyword => $circle_id){
+        foreach ($circle_map as $keyword => $circle_id) {
             Db::table('xhs_zhihu')
                 ->where('source_keyword', $keyword)
                 ->update(['circle_id' => $circle_id]);
         }
         return true;
     }
+
+    public function transPost()
+    {
+        var_dump('234234234');
+        $info = Db::table('xhs_zhihu')
+            ->where('circle_id', '>', 0)
+            ->whereNull('post_id')
+            ->first();
+        var_dump($info);
+        if (empty($info)) {
+            return 0;
+        }
+        $to_user_id = rand(1057, 1437);
+        $answer_user_id = 0;
+        $answer_id = 0;
+        if ($info->content_type == 'answer') {
+            $post_id = Db::table('post')->insertGetId([
+                'source' => 'admin',
+                'title' => $info->title,
+                'post_type' => PostType::QA->value,
+                'circle_id' => $info->circle_id,
+                'user_id' => $to_user_id,
+                'content' => '',
+                'media_type' => 1,
+                'media' => '',
+                'audit_status' => AuditStatus::PASSED->value,
+                'create_time' => date('Y-m-d H:i:s', $info->created_time),
+                'update_time' => date('Y-m-d H:i:s', $info->updated_time),
+            ]);
+            $answer_user_id = rand(1057, 1437);
+            $answer_id = Db::table('comment')->insertGetId([
+                'source' => 'admin',
+                'post_id' => $post_id,
+                'post_type' => PostType::QA->value,
+                'user_id' => $answer_user_id,
+                'content' => $info->content_text,
+                'audit_status' => AuditStatus::PASSED->value,
+                'create_time' => date('Y-m-d H:i:s', $info->created_time),
+                'update_time' => date('Y-m-d H:i:s', $info->updated_time),
+            ]);
+        } elseif ($info->content_type == 'article') {
+            $post_id = Db::table('post')->insertGetId([
+                'source' => 'admin',
+                'title' => $info->title,
+                'post_type' => PostType::DYNAMIC->value,
+                'circle_id' => $info->circle_id,
+                'user_id' => $to_user_id,
+                'content' => $info->content_text,
+                'media_type' => 1,
+                'media' => '',
+                'audit_status' => AuditStatus::PASSED->value,
+                'create_time' => date('Y-m-d H:i:s', $info->created_time),
+                'update_time' => date('Y-m-d H:i:s', $info->updated_time),
+            ]);
+        } else {
+            $post_id = -1;
+        }
+        Db::table('xhs_zhihu')
+            ->where('content_id', $info->content_id)
+            ->update([
+                'to_user_id' => $to_user_id,
+                'post_id' => $post_id,
+                'answer_id' => $answer_id,
+                'answer_user_id' => $answer_user_id
+            ]);
+        return 1;
+    }
+
 }
