@@ -65,7 +65,10 @@ class JwtAuthTokenLib implements AuthTokenInterface
     {
         try {
             $token = JWTUtil::getToken($this->request);
-            $status_code = $token === false ? 401 : 402;
+            $status_code = 401;
+            if($scene != 'admin'){
+                $status_code = $token === false ? 401 : 402;
+            }
             if ($token !== false && $this->jwt->verifyTokenAndScene($scene, $token)) {
                 return [
                     'dynamic_exp' => $this->jwt->getTokenDynamicCacheTime($token),
