@@ -33,10 +33,10 @@ class ExampleTest extends TestCase
     public function testExample()
     {
 //        $file = BASE_PATH.'/data/douyin.json';
-        $service = make(ZhihuService::class);
+        $service = make(ZDouYinService::class);
         $res = 1;
         while ($res){
-            $res = $service->transUser();
+            $res = $service->transPost();
         }
         $this->assertTrue(true, '1111');
     }

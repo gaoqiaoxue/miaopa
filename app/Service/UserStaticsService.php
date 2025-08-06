@@ -69,8 +69,8 @@ class UserStaticsService
             $sta_date = Carbon::now()->subDays($i)->toDateString();
             $result[] = [
                 'time' => $sta_date,
-                'guest' => $data[$sta_date]['guest_count'] ?? 0,
-                'user' => $data[$sta_date]['user_count'] ?? 0,
+                'guest' => $data[$sta_date]->guest_count ?? 0,
+                'user' => $data[$sta_date]->user_count ?? 0,
             ];
         }
         return $result;

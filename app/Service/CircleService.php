@@ -399,6 +399,7 @@ LIMIT :limit;';
             $post_counts = Db::table('post')
                 ->where('circle_id', $item->id)
                 ->where('audit_status', '=', AuditStatus::PASSED->value)
+                ->where('del_flag', '=', 0)
                 ->groupBy('post_type')
                 ->select(['post_type', Db::raw('count(*) as count')])
                 ->get()

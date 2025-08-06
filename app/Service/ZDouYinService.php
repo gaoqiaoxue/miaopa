@@ -60,6 +60,7 @@ class ZDouYinService
         foreach ($circle_map as $keyword => $circle_id){
             Db::table('xhs_douyin')
                 ->where('source_keyword', $keyword)
+                ->where('circle_id', '=', 0)
                 ->update(['circle_id' => $circle_id]);
         }
         return true;

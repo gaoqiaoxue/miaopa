@@ -36,7 +36,7 @@ class ApiBaseMiddleware implements MiddlewareInterface
             });
             !empty($user_data['user_id']) && $this->userStaticsService->recordActive('user', $user_data['user_id']);
         }else{
-            $core_id = $request->getHeaderLine('core_id');
+            $core_id = $request->getHeaderLine('coreId');
             !empty($core_id) && $this->userStaticsService->recordActive('guest', $core_id);
         }
         return $handler->handle($request);
